@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Q4 — 한 국가 방문 흐름 구조 비교</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: #f1f5f9;
+    margin: 0;
+    padding: 32px 24px;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    line-height: 1.6;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .subtitle { color: #94a3b8; font-size: 14px; margin: 0 0 32px; }
+  .option {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .option .head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .letter {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: #0ea5e9; color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; flex-shrink: 0;
+  }
+  .option h3 { margin: 0; font-size: 17px; }
+  .option p { margin: 6px 0 14px; font-size: 14px; color: #cbd5e1; }
+  .flow-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; margin-bottom: 12px; }
+  .stop {
+    flex: 1; min-width: 130px;
+    border: 2px solid #94a3b8;
+    border-radius: 10px;
+    padding: 10px 8px;
+    background: #1e293b;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #f1f5f9;
+  }
+  .stop.airport { background: #334155; border-color: #64748b; }
+  .stop.outdoor-cold { background: #1e3a8a; border-color: #3b82f6; }
+  .stop.outdoor-hot  { background: #7c2d12; border-color: #f97316; }
+  .stop.indoor-hot  { background: #7c2d12; border-color: #fb923c; }
+  .stop.indoor-cold { background: #1e3a8a; border-color: #60a5fa; }
+  .stop b { display: block; margin-bottom: 4px; font-size: 13px; }
+  .stop .learn {
+    display: block; margin-top: 6px; padding-top: 6px;
+    border-top: 1px dashed #64748b;
+    font-size: 11px; color: #cbd5e1;
+  }
+  .arrow { display: flex; align-items: center; color: #64748b; font-size: 18px; }
+  .stat { font-size: 12px; color: #94a3b8; margin-top: 8px; }
+  .recommend {
+    background: #064e3b;
+    border-color: #059669;
+  }
+  .recommend .letter { background: #059669; }
+  .recommend-tag {
+    display: inline-block;
+    background: #059669; color: white;
+    font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    margin-left: 8px;
+  }
+  .footer-note {
+    margin-top: 24px; font-size: 13px; color: #94a3b8;
+    border-top: 1px solid #334155; padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Q4 — 한 국가 방문 흐름 구조</h1>
+  <p class="subtitle">예시: 핀란드 (추운 나라 + 사우나) — 한 번 방문하는 동안 어떤 단계를 거칠까요?</p>
+
+  <div class="option recommend">
+    <div class="head">
+      <div class="letter">A</div>
+      <h3>압축형 — 1국가 = 3 stops (학습 비트 2개)<span class="recommend-tag">Claude 추천</span></h3>
+    </div>
+    <p>야외 한 곳에서 신경+호르몬 반응을 시간 경과로 함께 다루고, 실내 패러독스에서 반대 반응을 학습.</p>
+    <div class="flow-row">
+      <div class="stop airport"><b>✈️ 공항 도착</b>도입 컷씬</div>
+      <div class="arrow">→</div>
+      <div class="stop outdoor-cold"><b>🏔️ 시내 광장 (-15℃)</b>몸 떨림 + 혈관 수축<br/><i>잠시 후 티록신 분비 증가</i><span class="learn">학습: 추운 환경 신경+호르몬 반응</span></div>
+      <div class="arrow">→</div>
+      <div class="stop indoor-hot"><b>♨️ 사우나 (90℃)</b>혈관 확장 + 땀 분비<span class="learn">학습: 환경 반전 시 항상성</span></div>
+      <div class="arrow">→</div>
+      <div class="stop airport"><b>✈️ 출국</b>학습 정리 카드</div>
+    </div>
+    <div class="stat">⏱ 1국가 ≈ 5분 · 2국가 클리어 ≈ 10분 · 4국가 ≈ 20분 · 콘텐츠 작성 부담 <b>낮음</b></div>
+  </div>
+
+  <div class="option">
+    <div class="head">
+      <div class="letter">B</div>
+      <h3>분리형 — 1국가 = 4 stops (학습 비트 3개)</h3>
+    </div>
+    <p>야외를 두 곳으로 나누어 신경 반응과 호르몬 반응을 또렷이 분리. 실내 패러독스에서 반대 반응.</p>
+    <div class="flow-row">
+      <div class="stop airport"><b>✈️ 공항</b></div>
+      <div class="arrow">→</div>
+      <div class="stop outdoor-cold"><b>🏔️ 시내</b>떨림+혈관 수축<span class="learn">신경 반응</span></div>
+      <div class="arrow">→</div>
+      <div class="stop outdoor-cold"><b>❄️ 호숫가</b>티록신 ↑ → 세포 호흡 ↑<span class="learn">호르몬 반응</span></div>
+      <div class="arrow">→</div>
+      <div class="stop indoor-hot"><b>♨️ 사우나</b>혈관 확장+땀<span class="learn">반대 환경 반응</span></div>
+      <div class="arrow">→</div>
+      <div class="stop airport"><b>✈️ 출국</b></div>
+    </div>
+    <div class="stat">⏱ 1국가 ≈ 7~8분 · 2국가 클리어 ≈ 15분 · 4국가 ≈ 30분 · 콘텐츠 작성 부담 <b>중간</b></div>
+  </div>
+
+  <div class="option">
+    <div class="head">
+      <div class="letter">C</div>
+      <h3>왕복형 — 1국가 = 5 stops (학습 비트 3개)</h3>
+    </div>
+    <p>야외 → 실내 → <b>다시 야외 복귀</b> 까지 다뤄, "추위 → 더위 → 추위" 의 이중 항상성 전환을 강조.</p>
+    <div class="flow-row">
+      <div class="stop airport"><b>✈️ 공항</b></div>
+      <div class="arrow">→</div>
+      <div class="stop outdoor-cold"><b>🏔️ 시내 (-15℃)</b>떨림+혈관 수축, 티록신<span class="learn">추운 환경 반응</span></div>
+      <div class="arrow">→</div>
+      <div class="stop indoor-hot"><b>♨️ 사우나 (90℃)</b>혈관 확장+땀<span class="learn">더운 환경 반응</span></div>
+      <div class="arrow">→</div>
+      <div class="stop outdoor-cold"><b>🏔️ 시내 복귀</b>다시 추위 반응<span class="learn">전환 항상성</span></div>
+      <div class="arrow">→</div>
+      <div class="stop airport"><b>✈️ 출국</b></div>
+    </div>
+    <div class="stat">⏱ 1국가 ≈ 8~10분 · 2국가 클리어 ≈ 18분 · 4국가 ≈ 36분 · 콘텐츠 작성 부담 <b>중상</b></div>
+  </div>
+
+  <div class="footer-note">
+    💡 더운 나라(예: 두바이)는 색이 반전됩니다: 야외(더위) → 실내 스키장(추위) → (C라면) 야외 복귀.<br/>
+    💡 시간 경과 = 시각 효과(캐릭터 옆에 떨림→땀→안정 등으로 표현). 실시간 30초 이내로 압축.<br/>
+    💡 이 화면은 <code>superpowers:brainstorming</code> 시각 컴패니언으로 만들었던 mockup의 standalone 사본입니다.
+  </div>
+</div>
+</body>
+</html>
