@@ -1,0 +1,9 @@
+{
+  "scene": "country_canada_indoor",
+  "startNode": "entry",
+  "nodes": [
+    { "id": "entry",      "x": 200, "y": 600, "type": "walk",    "label": "실내 도착" },
+    { "id": "minigame",   "x": 640, "y": 400, "type": "trigger", "label": "추위 반응 미니액션", "action": "minigame_sweat" },
+    { "id": "exit_indoor","x": 1100, "y": 400, "type": "exit",   "label": "공항으로", "action": "next_phase" }
+  ]
+}

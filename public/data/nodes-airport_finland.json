@@ -1,0 +1,9 @@
+{
+  "scene": "airport_finland",
+  "startNode": "entry",
+  "nodes": [
+    { "id": "entry", "x": 200, "y": 600, "type": "walk",    "label": "공항 입구" },
+    { "id": "gate",  "x": 640, "y": 400, "type": "trigger", "label": "탑승 게이트", "action": "airport_quiz" },
+    { "id": "board", "x": 1100, "y": 400, "type": "exit",   "label": "탑승", "action": "next_phase" }
+  ]
+}

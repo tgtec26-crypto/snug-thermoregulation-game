@@ -1,0 +1,8 @@
+{
+  "scene": "ending",
+  "startNode": "entry",
+  "nodes": [
+    { "id": "entry",   "x": 200, "y": 600, "type": "walk",    "label": "교실 복귀" },
+    { "id": "podium",  "x": 640, "y": 400, "type": "trigger", "label": "발표 위치", "action": "ending_card" }
+  ]
+}
