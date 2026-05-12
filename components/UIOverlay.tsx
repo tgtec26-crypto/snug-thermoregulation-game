@@ -9,6 +9,7 @@ import { RPSModal } from '@/components/overlays/RPSModal';
 import { QuizModal } from '@/components/overlays/QuizModal';
 import { MinigameModal } from '@/components/overlays/MinigameModal';
 import { TempTickRunner } from '@/components/overlays/TempTickRunner';
+import { EndingCard } from '@/components/overlays/EndingCard';
 import type { Phase } from '@/game/types';
 
 const HUD_HIDDEN_PHASES = new Set<Phase>([
@@ -32,7 +33,7 @@ export function UIOverlay() {
       <QuizModal />
       <TempTickRunner />
       <MinigameModal />
-      {/* EndingCard는 후속 task에서 */}
+      <EndingCard />
     </>
   );
 }
