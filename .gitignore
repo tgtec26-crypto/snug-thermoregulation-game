@@ -40,7 +40,6 @@ pnpm-debug.log*
 .claude/
 
 # next.js (create-next-app 추가본)
-yarn-debug.log*
 yarn-error.log*
 
 # vercel
