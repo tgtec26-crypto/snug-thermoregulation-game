@@ -41,6 +41,8 @@ export interface GameState {
   // 노드 오버레이 (Phaser → React 브릿지)
   activeNodes: SceneNodes | null;
   pendingNodeClick: string | null;
+  // 현재 강조 표시할 목표 노드 id (CountryMapScene에서 설정 → NodeLabelOverlay에서 pin/blink)
+  targetNodeId: string | null;
 
   // 영구 안내 배너 (토스트와 별개 — 명시적으로 clear 호출 시까지 유지)
   guidance: string;
@@ -64,6 +66,7 @@ export interface GameState {
   setActiveNodes: (nodes: SceneNodes | null) => void;
   clickNode: (nodeId: string) => void;
   clearNodeClick: () => void;
+  setTargetNodeId: (id: string | null) => void;
   reset: () => void;
 }
 
@@ -71,7 +74,8 @@ const initialState: Omit<GameState,
   | 'setPhase' | 'setNickname' | 'chooseCold' | 'chooseHot' | 'setActualCountries'
   | 'completeCountry' | 'adjustTemp' | 'setVesselState' | 'setSweatLevel'
   | 'setThyroxineLevel' | 'recordTick' | 'recordQuizAttempt' | 'setCharacterPos'
-  | 'showToast' | 'setGuidance' | 'setActiveNodes' | 'clickNode' | 'clearNodeClick' | 'reset'
+  | 'showToast' | 'setGuidance' | 'setActiveNodes' | 'clickNode' | 'clearNodeClick'
+  | 'setTargetNodeId' | 'reset'
 > = {
   nickname: '',
   phase: 'title',
@@ -93,6 +97,7 @@ const initialState: Omit<GameState,
   currentToast: '',
   activeNodes: null,
   pendingNodeClick: null,
+  targetNodeId: null,
   guidance: '',
 };
 
@@ -147,6 +152,7 @@ export const useGameStore = create<GameState>()(
       setActiveNodes: (activeNodes) => set({ activeNodes }),
       clickNode: (pendingNodeClick) => set({ pendingNodeClick }),
       clearNodeClick: () => set({ pendingNodeClick: null }),
+      setTargetNodeId: (targetNodeId) => set({ targetNodeId }),
 
       setGuidance: (guidance) => set({ guidance }),
 
@@ -188,6 +194,7 @@ export const useGameStore = create<GameState>()(
           activeNodes: _19, pendingNodeClick: _20,
           phase: _21,   // ← 새로고침마다 항상 title부터 시작
           setGuidance: _22, guidance: _23,   // 런타임 안내 메시지 — 새로고침마다 초기화
+          setTargetNodeId: _24, targetNodeId: _25,   // 런타임 강조 노드 — 새로고침마다 초기화
           ...persistable } = state;
         return persistable;
       },

@@ -7,8 +7,9 @@ import { GAME_WIDTH, GAME_HEIGHT } from '@/game/config';
 interface CanvasRect { left: number; top: number; width: number; height: number; }
 
 export function NodeLabelOverlay() {
-  const activeNodes = useGameStore(s => s.activeNodes);
-  const clickNode   = useGameStore(s => s.clickNode);
+  const activeNodes   = useGameStore(s => s.activeNodes);
+  const clickNode     = useGameStore(s => s.clickNode);
+  const targetNodeId  = useGameStore(s => s.targetNodeId);
   const [canvasRect, setCanvasRect] = useState<CanvasRect | null>(null);
 
   useEffect(() => {
@@ -63,38 +64,75 @@ export function NodeLabelOverlay() {
 
   const sx = canvasRect.width  / GAME_WIDTH;
   const sy = canvasRect.height / GAME_HEIGHT;
-  // SVG 버튼 표시 크기 (Phaser 좌표 기준으로 설계 후 스케일 적용)
-  const BTN_W = 220 * sx;
-  const BTN_H =  70 * sy;
 
+  // 핀 크기 (원본 50×50을 캔버스 스케일에 맞춰 비례)
+  const PIN_SIZE = 44 * sx;
+
+  // 어드민과 동일한 스타일: 흰 카드 + 색상 테두리 + img h-8(32px). 노드 좌표에 중심 정렬.
+  // 어드민에서 배치 시 보이는 비주얼과 인게임 비주얼이 일치하도록 동일 마크업 사용.
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 10 }}>
-      {svgNodes.map(n => (
-        <button
-          key={n.id}
-          onClick={() => clickNode(n.id)}
-          style={{
-            position: 'absolute',
-            left:  canvasRect.left + n.x * sx - BTN_W / 2,
-            top:   canvasRect.top  + n.y * sy - BTN_H,   // 발 위치 기준으로 버튼을 위에 표시
-            width: BTN_W,
-            height: BTN_H,
-            pointerEvents: 'auto',
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={n.labelSvg}
-            alt={n.label ?? n.id}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            draggable={false}
-          />
-        </button>
-      ))}
+      {svgNodes.map(n => {
+        const isTarget = targetNodeId === n.id;
+        const left = canvasRect.left + n.x * sx;
+        const top  = canvasRect.top  + n.y * sy;
+        return (
+          <div key={n.id}>
+            <button
+              onClick={() => clickNode(n.id)}
+              style={{
+                position: 'absolute',
+                left,
+                top,
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'auto',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+              }}
+            >
+              <div
+                className={`rounded-md bg-white/95 shadow-lg border-2 px-1 py-0.5 ${isTarget ? 'guidance-blink' : ''}`}
+                style={{ borderColor: BORDER_COLOR[n.id] ?? '#ffffff' }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={n.labelSvg}
+                  alt={n.label ?? n.id}
+                  className="block h-8 w-auto"
+                  draggable={false}
+                />
+              </div>
+            </button>
+            {isTarget && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/assets/etc/pin.png"
+                alt=""
+                className="guidance-pin"
+                style={{
+                  position: 'absolute',
+                  left,
+                  top: top - 42 * sx,    // 노드 카드 위쪽으로 띄움
+                  width: PIN_SIZE,
+                  height: PIN_SIZE,
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+                draggable={false}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
+
+// 노드 id별 테두리 색 (어드민의 DEST_COLOR와 동일)
+const BORDER_COLOR: Record<string, string> = {
+  airport: '#3b82f6',  // 파랑
+  outdoor: '#84cc16',  // 라임
+  indoor:  '#ec4899',  // 핑크
+};

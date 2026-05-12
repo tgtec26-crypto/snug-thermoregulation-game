@@ -15,11 +15,15 @@ interface CountryMapInit {
   position?: Position;     // 캐릭터 시작 위치 (비행기 도착 시 'airport')
 }
 
-const TOAST_BY_DEST: Record<Position, string> = {
-  outdoor: '🌄 야외로 이동하세요',
-  indoor:  '🏠 실내로 이동하세요',
-  airport: '✈️ 공항으로 돌아가세요',
-};
+// 한글 받침 유무로 조사(으로/로) 선택. 받침 없음 + ㄹ 받침 → '로', 그 외 → '으로'
+function josa(text: string): '로' | '으로' {
+  const last = text[text.length - 1];
+  if (!last) return '로';
+  const code = last.charCodeAt(0) - 0xAC00;
+  if (code < 0 || code > 11171) return '로';   // 한글 음절 아님
+  const jongseong = code % 28;
+  return jongseong === 0 || jongseong === 8 ? '로' : '으로';
+}
 
 /**
  * 국가 맵 — 공항/야외/실내 사이를 맨해튼 폴리라인 경로로 캐릭터가 걸어다니는 hub.
@@ -77,28 +81,40 @@ export class CountryMapScene extends Phaser.Scene {
     useGameStore.getState().setActiveNodes(this.nodesData);
 
     // 다음 목적지 + 영구 안내 배너 (학생이 클릭할 때까지 유지)
+    // 게시판 텍스트는 노드의 `label` 필드 기반 — "{label}{으로/로} 이동하세요"
     const nextDest = this.computeNextDest();
-    useGameStore.getState().setGuidance(TOAST_BY_DEST[nextDest]);
+    const destNode = this.nodesData.nodes.find(n => n.id === nextDest);
+    const destLabel = destNode?.label ?? nextDest;
+    useGameStore.getState().setGuidance(`${destLabel}${josa(destLabel)} 이동하세요`);
+    useGameStore.getState().setTargetNodeId(nextDest);
 
     // 노드 클릭 브릿지 (NodeLabelOverlay가 pendingNodeClick 설정)
-    this.storeUnsub = useGameStore.subscribe((state, prev) => {
+    // 잘못된 노드 클릭은 무시(경고 토스트 표시 없음) — 강조된 정답 노드만 반응
+    // 방어적: 이전 인스턴스의 subscriber가 남아 있을 가능성 차단 (Phaser 씬 재진입 시 closure leak 방지)
+    if (this.storeUnsub) { this.storeUnsub(); this.storeUnsub = null; }
+    const unsub = useGameStore.subscribe((state, prev) => {
       if (state.pendingNodeClick && state.pendingNodeClick !== prev.pendingNodeClick) {
         const clicked = state.pendingNodeClick;
         useGameStore.getState().clearNodeClick();
         if (clicked === nextDest) {
           this.walkTo(nextDest);
-        } else {
-          // 잘못된 클릭 → 안내 토스트 한 번 강조
-          useGameStore.getState().showToast(`⚠️ ${TOAST_BY_DEST[nextDest]}`);
         }
       }
+    });
+    this.storeUnsub = unsub;
+    // shutdown 이벤트로도 한 번 더 정리 (shutdown() 메서드 + 이중 안전망)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unsub();
+      if (this.storeUnsub === unsub) this.storeUnsub = null;
     });
   }
 
   shutdown() {
     this.storeUnsub?.();
+    this.storeUnsub = null;
     useGameStore.getState().setActiveNodes(null);
     useGameStore.getState().setGuidance('');
+    useGameStore.getState().setTargetNodeId(null);
   }
 
   private computeNextDest(): Position {
@@ -128,9 +144,10 @@ export class CountryMapScene extends Phaser.Scene {
       { x: toN.x, y: toN.y },
     ];
 
-    // 이동 중에는 React SVG 버튼 + 안내 배너 모두 일시 제거 (중복 클릭/혼란 방지)
+    // 이동 중에는 React SVG 버튼 + 안내 배너 + 핀 모두 일시 제거 (중복 클릭/혼란 방지)
     useGameStore.getState().setActiveNodes(null);
     useGameStore.getState().setGuidance('');
+    useGameStore.getState().setTargetNodeId(null);
 
     this.walkSegments(polyline, 0, () => {
       this.isMoving = false;

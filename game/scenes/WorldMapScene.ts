@@ -58,9 +58,12 @@ export class WorldMapScene extends Phaser.Scene {
     const cp1 = cps?.cp1 ?? { x: midX, y: midY };
     const cp2 = cps?.cp2 ?? { x: midX, y: midY - 20 };
 
+    const BASE_W = 60, BASE_H = 40;
+    const PEAK_ZOOM = 0.3;   // 순항 시 최대 +30% (1.0 → 1.3 → 1.0)
+    const isImage = this.textures.exists('move_airplane');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const plane: any = this.textures.exists('move_airplane')
-      ? this.add.image(fromNode.x, fromNode.y, 'move_airplane').setOrigin(0.5, 0.5).setDisplaySize(60, 40)
+    const plane: any = isImage
+      ? this.add.image(fromNode.x, fromNode.y, 'move_airplane').setOrigin(0.5, 0.5).setDisplaySize(BASE_W, BASE_H)
       : this.add.text(fromNode.x, fromNode.y, '✈️', { fontSize: '36px' }).setOrigin(0.5, 0.5);
 
     const progress = { t: 0 };
@@ -73,7 +76,12 @@ export class WorldMapScene extends Phaser.Scene {
         const pos   = bezierPoint(progress.t, fromNode.x, fromNode.y, cp1.x, cp1.y, cp2.x, cp2.y, toNode.x, toNode.y);
         const angle = bezierAngle(progress.t, fromNode.x, fromNode.y, cp1.x, cp1.y, cp2.x, cp2.y, toNode.x, toNode.y);
         plane.setPosition(pos.x, pos.y);
-        plane.setRotation(angle);
+        // airplane.png의 선두가 위쪽(↑)을 향하고 있음 → 경로 진행 방향에 맞추려면 +π/2 오프셋 필요
+        plane.setRotation(angle + Math.PI / 2);
+        // 이륙(처음) → 순항(중간 +30%) → 착륙(끝 원래) 줌
+        const zoom = 1 + Math.sin(progress.t * Math.PI) * PEAK_ZOOM;
+        if (isImage) plane.setDisplaySize(BASE_W * zoom, BASE_H * zoom);
+        else plane.setScale(zoom);
       },
       onComplete: () => {
         this.time.delayedCall(500, () => this.advanceAfterCutscene());

@@ -6,6 +6,7 @@ export interface AssetEntry {
 }
 
 export const BACKGROUNDS: AssetEntry[] = [
+  { key: 'bg_title',                     path: '/assets/backgrounds/start.png',                type: 'image' },
   { key: 'bg_classroom',                 path: '/assets/backgrounds/classroom_start.png',     type: 'image' },
   // 모든 공항 내부는 airport.png 공용
   { key: 'bg_airport_start',             path: '/assets/backgrounds/airport.png',              type: 'image' },
@@ -63,6 +64,7 @@ export const MOVE_ASSETS: AssetEntry[] = [
 
 // Placeholder 색상 (자산 없을 때 fallback)
 export const PLACEHOLDER_BG_COLORS: Record<string, number> = {
+  bg_title:                   0x1a3a5a,
   bg_classroom:               0xfff4dc,
   bg_airport_start:           0xe0e8f4,
   bg_airport_finland:         0xd4e4f4,

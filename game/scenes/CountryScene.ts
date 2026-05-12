@@ -13,6 +13,7 @@ export class CountryScene extends BaseGameScene {
   private country: Country = 'finland';
   private slot: 1 | 2 = 1;
   private area: 'outdoor' | 'indoor' = 'outdoor';
+  private phaseUnsub: (() => void) | null = null;
 
   constructor() {
     super({
@@ -43,6 +44,8 @@ export class CountryScene extends BaseGameScene {
       store.setPhase(targetPhase);
     }
 
+    // 방어적: 이전 instance의 phase subscriber 정리 (씬 재진입 시 closure leak 방지)
+    if (this.phaseUnsub) { this.phaseUnsub(); this.phaseUnsub = null; }
     // 미니게임 완료(MinigameModal이 country_<slot>_arrived 로 phase 설정) → country_map 복귀
     const unsub = useGameStore.subscribe((s, prev) => {
       if (prev.phase === s.phase) return;
@@ -51,7 +54,11 @@ export class CountryScene extends BaseGameScene {
         this.scene.start('country_map', { country: this.country, slot: this.slot, position: this.area });
       }
     });
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsub);
+    this.phaseUnsub = unsub;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unsub();
+      if (this.phaseUnsub === unsub) this.phaseUnsub = null;
+    });
   }
 
   private minigamePhase(): Phase {
