@@ -7,6 +7,7 @@ import { KoreaBusScene } from './scenes/KoreaBusScene';
 import { AirportScene } from './scenes/AirportScene';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { CountryScene } from './scenes/CountryScene';
+import { CountryMapScene } from './scenes/CountryMapScene';
 import { EndingScene } from './scenes/EndingScene';
 
 export function makePhaserConfig(parent: HTMLElement): Phaser.Types.Core.GameConfig {
@@ -18,7 +19,8 @@ export function makePhaserConfig(parent: HTMLElement): Phaser.Types.Core.GameCon
     backgroundColor: '#000',
     scene: [
       BootScene, TitleScene, ClassroomScene,
-      KoreaBusScene, AirportScene, WorldMapScene, CountryScene, EndingScene,
+      KoreaBusScene, AirportScene, WorldMapScene,
+      CountryMapScene, CountryScene, EndingScene,
     ],
     pixelArt: true,
     scale: {

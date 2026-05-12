@@ -21,16 +21,40 @@ export function NodeLabelOverlay() {
 
     update();
 
-    const ro = new ResizeObserver(update);
-    const canvas = document.querySelector('canvas');
-    if (canvas) ro.observe(canvas);
+    // 캔버스가 NodeLabelOverlay 마운트 후에 생성될 수 있어 ResizeObserver를 등록할 캔버스가
+    // 없는 경우 짧게 폴링해서 잡는다. (Phaser 비동기 부팅 대응)
+    let pollId: ReturnType<typeof setInterval> | null = null;
+    let ro: ResizeObserver | null = null;
+    const setupObserver = () => {
+      const canvas = document.querySelector('canvas');
+      if (!canvas || ro) return false;
+      update();
+      ro = new ResizeObserver(update);
+      ro.observe(canvas);
+      return true;
+    };
+    if (!setupObserver()) {
+      pollId = setInterval(() => {
+        if (setupObserver() && pollId) { clearInterval(pollId); pollId = null; }
+      }, 200);
+    }
     window.addEventListener('resize', update);
 
     return () => {
-      ro.disconnect();
+      if (pollId) clearInterval(pollId);
+      ro?.disconnect();
       window.removeEventListener('resize', update);
     };
   }, []);
+
+  // activeNodes가 새로 들어올 때마다 캔버스 위치/크기 재측정 (씬 전환 후 첫 렌더에서 빠뜨림 방지)
+  useEffect(() => {
+    if (!activeNodes) return;
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return;
+    const r = canvas.getBoundingClientRect();
+    setCanvasRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+  }, [activeNodes]);
 
   if (!activeNodes || !canvasRect) return null;
 

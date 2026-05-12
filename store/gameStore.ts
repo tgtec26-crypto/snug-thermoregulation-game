@@ -42,6 +42,9 @@ export interface GameState {
   activeNodes: SceneNodes | null;
   pendingNodeClick: string | null;
 
+  // 영구 안내 배너 (토스트와 별개 — 명시적으로 clear 호출 시까지 유지)
+  guidance: string;
+
   // 액션
   setPhase: (p: Phase) => void;
   setNickname: (n: string) => void;
@@ -57,6 +60,7 @@ export interface GameState {
   recordQuizAttempt: (questionId: string, wasFirstAttempt: boolean) => void;
   setCharacterPos: (x: number, y: number) => void;
   showToast: (message: string) => void;
+  setGuidance: (text: string) => void;
   setActiveNodes: (nodes: SceneNodes | null) => void;
   clickNode: (nodeId: string) => void;
   clearNodeClick: () => void;
@@ -67,7 +71,7 @@ const initialState: Omit<GameState,
   | 'setPhase' | 'setNickname' | 'chooseCold' | 'chooseHot' | 'setActualCountries'
   | 'completeCountry' | 'adjustTemp' | 'setVesselState' | 'setSweatLevel'
   | 'setThyroxineLevel' | 'recordTick' | 'recordQuizAttempt' | 'setCharacterPos'
-  | 'showToast' | 'setActiveNodes' | 'clickNode' | 'clearNodeClick' | 'reset'
+  | 'showToast' | 'setGuidance' | 'setActiveNodes' | 'clickNode' | 'clearNodeClick' | 'reset'
 > = {
   nickname: '',
   phase: 'title',
@@ -89,6 +93,7 @@ const initialState: Omit<GameState,
   currentToast: '',
   activeNodes: null,
   pendingNodeClick: null,
+  guidance: '',
 };
 
 export const useGameStore = create<GameState>()(
@@ -143,6 +148,8 @@ export const useGameStore = create<GameState>()(
       clickNode: (pendingNodeClick) => set({ pendingNodeClick }),
       clearNodeClick: () => set({ pendingNodeClick: null }),
 
+      setGuidance: (guidance) => set({ guidance }),
+
       showToast: (currentToast) => {
         set({ currentToast });
         setTimeout(() => {
@@ -171,12 +178,16 @@ export const useGameStore = create<GameState>()(
       ),
       partialize: (state) => {
         // 함수·런타임 전용 상태 제외
+        // phase는 의도적으로 persist에서 빼서 새로고침마다 항상 'title'로 시작 (개발 친화적)
+        // 추후 학생용 이어하기 기능 필요 시 phase 다시 포함 + 재진입 라우팅 로직 추가
         const { setPhase: _1, setNickname: _2, chooseCold: _3, chooseHot: _4,
           setActualCountries: _5, completeCountry: _6, adjustTemp: _7,
           setVesselState: _8, setSweatLevel: _9, setThyroxineLevel: _10,
           recordTick: _11, recordQuizAttempt: _12, setCharacterPos: _13, reset: _14,
           showToast: _15, setActiveNodes: _16, clickNode: _17, clearNodeClick: _18,
           activeNodes: _19, pendingNodeClick: _20,
+          phase: _21,   // ← 새로고침마다 항상 title부터 시작
+          setGuidance: _22, guidance: _23,   // 런타임 안내 메시지 — 새로고침마다 초기화
           ...persistable } = state;
         return persistable;
       },

@@ -1,7 +1,7 @@
+import * as Phaser from 'phaser';
 import { BaseGameScene } from './BaseGameScene';
-import type { NodeConfig, Country } from '@/game/types';
+import type { Country, Phase } from '@/game/types';
 import { useGameStore } from '@/store/gameStore';
-import { getCountryById } from '@/game/data/countries';
 
 interface CountryInit {
   country: Country;
@@ -18,7 +18,9 @@ export class CountryScene extends BaseGameScene {
     super({
       sceneKey: 'country',
       backgroundKey: 'bg_country_finland_outdoor',
-      nodesUrl: '/data/nodes-country_finland_outdoor.json',
+      nodesUrl: '/data/nodes-country_finland_outdoor.json',  // staticOverlay라 사용 안 됨
+      staticOverlay: true,
+      showsHud: true,   // outdoor/indoor 씬은 HUD 표시 → 배경 우측 110px 비움
     });
   }
 
@@ -26,34 +28,34 @@ export class CountryScene extends BaseGameScene {
     this.country = data.country;
     this.slot = data.slot;
     this.area = data.area ?? 'outdoor';
-    const countryConfig = getCountryById(data.country);
-    const playerKey = countryConfig?.group === 'hot' ? 'player_hot' : 'player_cold';
-    const mutable = this.init_ as { sceneKey: string; backgroundKey: string; nodesUrl: string; playerKey: string };
+    // 동적으로 backgroundKey 변경 — init_은 readonly이므로 cast
+    const mutable = this.init_ as { sceneKey: string; backgroundKey: string; nodesUrl: string };
     mutable.backgroundKey = `bg_country_${this.country}_${this.area}`;
     mutable.nodesUrl = `/data/nodes-country_${this.country}_${this.area}.json`;
-    mutable.playerKey = playerKey;
   }
 
-  protected onNodeArrive(node: NodeConfig) {
+  protected onSceneReady() {
     const store = useGameStore.getState();
 
-    if (node.type === 'trigger' && node.action?.startsWith('minigame_')) {
-      const phase = this.slot === 1
-        ? (this.area === 'outdoor' ? 'country_1_outdoor' : 'country_1_indoor')
-        : (this.area === 'outdoor' ? 'country_2_outdoor' : 'country_2_indoor');
-      store.setPhase(phase);
-    } else if (node.type === 'exit' && node.action === 'next_phase') {
-      if (this.area === 'outdoor') {
-        this.scene.restart({ country: this.country, slot: this.slot, area: 'indoor' });
-      } else {
-        store.completeCountry(this.country);
-        if (this.slot === 1) {
-          store.setPhase('airport_1');
-        } else {
-          store.setPhase('airport_2');
-        }
-        this.scene.start('airport', { airportKey: `airport_${this.country}` });
-      }
+    // 진입 시 phase 보정 (이미 country_map.onArrive가 설정했지만 안전망)
+    const targetPhase = this.minigamePhase();
+    if (store.phase !== targetPhase) {
+      store.setPhase(targetPhase);
     }
+
+    // 미니게임 완료(MinigameModal이 country_<slot>_arrived 로 phase 설정) → country_map 복귀
+    const unsub = useGameStore.subscribe((s, prev) => {
+      if (prev.phase === s.phase) return;
+      const arrivedPhase: Phase = this.slot === 1 ? 'country_1_arrived' : 'country_2_arrived';
+      if (s.phase === arrivedPhase) {
+        this.scene.start('country_map', { country: this.country, slot: this.slot, position: this.area });
+      }
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsub);
+  }
+
+  private minigamePhase(): Phase {
+    if (this.slot === 1) return this.area === 'outdoor' ? 'country_1_outdoor' : 'country_1_indoor';
+    return this.area === 'outdoor' ? 'country_2_outdoor' : 'country_2_indoor';
   }
 }

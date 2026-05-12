@@ -1,0 +1,30 @@
+{
+  "scene": "country_finland_map",
+  "startNode": "airport",
+  "nodes": [
+    {
+      "id": "airport",
+      "x": 965,
+      "y": 414,
+      "type": "walk",
+      "label": "공항",
+      "labelSvg": "/assets/textbutton/finland_airport_button.svg"
+    },
+    {
+      "id": "outdoor",
+      "x": 596,
+      "y": 191,
+      "type": "walk",
+      "label": "라플란드 시내",
+      "labelSvg": "/assets/textbutton/finland_lapland_button.svg"
+    },
+    {
+      "id": "indoor",
+      "x": 308,
+      "y": 470,
+      "type": "walk",
+      "label": "사우나",
+      "labelSvg": "/assets/textbutton/finland_sauna_button.svg"
+    }
+  ]
+}

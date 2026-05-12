@@ -35,11 +35,24 @@ export const COUNTRY_MAPS: AssetEntry[] = [
   { key: 'map_egypt',   path: '/assets/backgrounds/egypt_map.png',   type: 'image' },
 ];
 
-// 플레이어 복장 — 지역별 static 이미지 (한국/추운나라/더운나라)
+// 플레이어 복장 — 자매 프로젝트 패턴(방향별 PNG 분리). scripts/extract-sprites.mjs 결과.
+// 캐릭터별 frame 사이즈가 다름 → 캐릭터별 frameConfig 사용.
+function spriteWalkEntries(
+  char: 'player_korea' | 'player_cold' | 'player_hot',
+  frameWidth: number,
+  frameHeight: number,
+): AssetEntry[] {
+  return (['down', 'left', 'up', 'right'] as const).map(dir => ({
+    key: `${char}_walk_${dir}`,
+    path: `/assets/sprites/${char}_walk_${dir}.png`,
+    type: 'spritesheet' as const,
+    frameConfig: { frameWidth, frameHeight },
+  }));
+}
 export const SPRITES: AssetEntry[] = [
-  { key: 'player_korea', path: '/assets/sprites/player_korea.png',        type: 'image' },
-  { key: 'player_cold',  path: '/assets/sprites/player_cold_country.png', type: 'image' },
-  { key: 'player_hot',   path: '/assets/sprites/player_hot_country.png',  type: 'image' },
+  ...spriteWalkEntries('player_korea', 83, 160),
+  ...spriteWalkEntries('player_cold',  86, 164),
+  ...spriteWalkEntries('player_hot',   85, 166),
 ];
 
 // 이동 수단 아이콘

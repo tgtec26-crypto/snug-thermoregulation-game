@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, HUD_WIDTH } from '@/game/config';
+import { GAME_WIDTH, GAME_HEIGHT } from '@/game/config';
 import { useGameStore } from '@/store/gameStore';
 import { bezierPoint, bezierAngle } from '@/game/utils/bezier';
 import type { KoreaBusPath } from '@/game/types';
@@ -22,10 +22,10 @@ export class KoreaBusScene extends Phaser.Scene {
   }
 
   create() {
-    const gameAreaW = GAME_WIDTH - HUD_WIDTH;
+    // HUD 미표시 씬이므로 풀 폭(1280) 사용
     this.add.image(0, 0, 'bg_korea_map')
       .setOrigin(0, 0)
-      .setDisplaySize(gameAreaW, GAME_HEIGHT);
+      .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
 
     const path = this.cache.json.get('paths_korea') as KoreaBusPath;
     if (!path) {

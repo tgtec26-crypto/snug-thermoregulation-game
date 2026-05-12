@@ -1,31 +1,27 @@
 import * as Phaser from 'phaser';
 import { BaseGameScene } from './BaseGameScene';
-import type { NodeConfig } from '@/game/types';
 import { useGameStore } from '@/store/gameStore';
 
 export class ClassroomScene extends BaseGameScene {
   constructor() {
-    super({ sceneKey: 'classroom', backgroundKey: 'bg_classroom', nodesUrl: '/data/nodes-classroom.json' });
+    super({
+      sceneKey: 'classroom',
+      backgroundKey: 'bg_classroom',
+      nodesUrl: '/data/nodes-classroom.json',  // staticOverlay라 사용 안 됨 (스펙 호환용)
+      staticOverlay: true,
+    });
   }
 
   protected onSceneReady() {
-    // 학급회의 종료(classroom_depart) 시 출구 노드로 자동 이동
+    // 학급회의 종료(classroom_depart) → 바로 버스 씬으로 전환 (오버레이 방식, 캐릭터 이동 없음)
     const unsub = useGameStore.subscribe((s, prev) => {
       if (prev.phase !== 'classroom_depart' && s.phase === 'classroom_depart') {
-        const exitNode = this.findNode('depart');
-        if (exitNode) this.moveToNode(exitNode);
+        this.time.delayedCall(250, () => {
+          useGameStore.getState().setPhase('korea_bus_to_airport');
+          this.scene.start('korea_bus', { direction: 'to_airport' });
+        });
       }
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsub);
-  }
-
-  protected onNodeArrive(node: NodeConfig) {
-    const { phase, setPhase } = useGameStore.getState();
-    if (node.id === 'choose' && phase === 'classroom_intro') {
-      setPhase('classroom_choose_cold');
-    } else if (node.id === 'depart' && phase === 'classroom_depart') {
-      setPhase('korea_bus_to_airport');
-      this.scene.start('korea_bus', { direction: 'to_airport' });
-    }
   }
 }

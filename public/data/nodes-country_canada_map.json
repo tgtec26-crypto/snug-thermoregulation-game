@@ -1,0 +1,30 @@
+{
+  "scene": "country_canada_map",
+  "startNode": "airport",
+  "nodes": [
+    {
+      "id": "airport",
+      "x": 1028,
+      "y": 545,
+      "type": "walk",
+      "label": "공항",
+      "labelSvg": "/assets/textbutton/canada_airport_button.svg"
+    },
+    {
+      "id": "outdoor",
+      "x": 437,
+      "y": 230,
+      "type": "walk",
+      "label": "옐로나이프 호숫가",
+      "labelSvg": "/assets/textbutton/canada_yellowknife_button.svg"
+    },
+    {
+      "id": "indoor",
+      "x": 224,
+      "y": 650,
+      "type": "walk",
+      "label": "노천 핫스프링",
+      "labelSvg": "/assets/textbutton/canada_hotspring_button.svg"
+    }
+  ]
+}

@@ -92,3 +92,17 @@ export interface KoreaBusPath {
   cp1:     { x: number; y: number };
   cp2:     { x: number; y: number };
 }
+
+// ── 국가 내부 맵 ─────────────────────────────────────────────────────────────
+// 공항 / 야외 / 실내 3개 목적지 + 그 사이를 잇는 맨해튼(폴리라인) 경로.
+// 경로는 단방향: airport → outdoor → indoor → airport.
+
+export type CountryMapPathKey = 'airport_outdoor' | 'outdoor_indoor' | 'indoor_airport';
+
+export interface CountryMapPath {
+  waypoints: { x: number; y: number }[];   // 시작·끝점 제외, 중간 꺾임점만
+}
+
+export type CountryMapPaths = Record<CountryMapPathKey, CountryMapPath>;
+
+export type CountryMapKey = 'finland' | 'canada' | 'dubai' | 'egypt';

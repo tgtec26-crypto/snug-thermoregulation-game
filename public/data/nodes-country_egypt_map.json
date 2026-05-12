@@ -1,0 +1,30 @@
+{
+  "scene": "country_egypt_map",
+  "startNode": "airport",
+  "nodes": [
+    {
+      "id": "airport",
+      "x": 1055,
+      "y": 537,
+      "type": "walk",
+      "label": "공항",
+      "labelSvg": "/assets/textbutton/egypt_airport_button.svg"
+    },
+    {
+      "id": "outdoor",
+      "x": 526,
+      "y": 229,
+      "type": "walk",
+      "label": "기자 피라미드",
+      "labelSvg": "/assets/textbutton/egypt_pyramid_button.svg"
+    },
+    {
+      "id": "indoor",
+      "x": 317,
+      "y": 616,
+      "type": "walk",
+      "label": "알렉산드리아 카타콤",
+      "labelSvg": "/assets/textbutton/egypt_catacombs_button.svg"
+    }
+  ]
+}

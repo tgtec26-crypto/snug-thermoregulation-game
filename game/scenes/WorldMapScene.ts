@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, HUD_WIDTH } from '@/game/config';
+import { GAME_WIDTH, GAME_HEIGHT } from '@/game/config';
 import { useGameStore } from '@/store/gameStore';
 import type { SceneNodes, Country, WorldmapPaths, WorldmapRouteKey } from '@/game/types';
 import { bezierPoint, bezierAngle } from '@/game/utils/bezier';
@@ -13,8 +13,8 @@ export class WorldMapScene extends Phaser.Scene {
   }
 
   create() {
-    const gameAreaW = GAME_WIDTH - HUD_WIDTH;
-    this.add.image(0, 0, 'bg_worldmap').setOrigin(0, 0).setDisplaySize(gameAreaW, GAME_HEIGHT);
+    // HUD 미표시 씬이므로 풀 폭(1280) 사용
+    this.add.image(0, 0, 'bg_worldmap').setOrigin(0, 0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
 
     const nodesData = this.cache.json.get('nodes_worldmap') as SceneNodes;
     const pathsData = this.cache.json.get('paths_worldmap') as WorldmapPaths;
@@ -44,7 +44,7 @@ export class WorldMapScene extends Phaser.Scene {
       return;
     }
 
-    this.add.text(gameAreaW / 2, 40, `${fromNode.label ?? from} → ${toNode.label ?? to}`, {
+    this.add.text(GAME_WIDTH / 2, 40, `${fromNode.label ?? from} → ${toNode.label ?? to}`, {
       fontFamily: 'Pretendard, system-ui',
       fontSize: '26px',
       color: '#1a3a5a',
@@ -86,10 +86,10 @@ export class WorldMapScene extends Phaser.Scene {
 
     if (phase === 'worldmap_to_1') {
       setPhase('country_1_arrived');
-      this.scene.start('country', { country: actualCold!, slot: 1 });
+      this.scene.start('country_map', { country: actualCold!, slot: 1, position: 'airport' });
     } else if (phase === 'worldmap_to_2') {
       setPhase('country_2_arrived');
-      this.scene.start('country', { country: actualHot!, slot: 2 });
+      this.scene.start('country_map', { country: actualHot!, slot: 2, position: 'airport' });
     } else if (phase === 'worldmap_to_home') {
       setPhase('korea_bus_to_school');
       this.scene.start('korea_bus', { direction: 'to_school' });

@@ -1,5 +1,6 @@
+import * as Phaser from 'phaser';
 import { BaseGameScene } from './BaseGameScene';
-import type { NodeConfig, Country } from '@/game/types';
+import type { Country } from '@/game/types';
 import { useGameStore } from '@/store/gameStore';
 
 interface AirportInit {
@@ -10,37 +11,32 @@ export class AirportScene extends BaseGameScene {
   private airportKey: AirportInit['airportKey'] = 'airport_start';
 
   constructor() {
-    super({ sceneKey: 'airport', backgroundKey: 'bg_airport_start', nodesUrl: '/data/nodes-airport_start.json' });
+    super({
+      sceneKey: 'airport',
+      backgroundKey: 'bg_airport_start',
+      nodesUrl: '/data/nodes-airport_start.json',  // staticOverlay라 사용 안 됨
+      staticOverlay: true,
+    });
   }
 
   init(data: AirportInit) {
     this.airportKey = data.airportKey;
-    // 동적으로 backgroundKey / nodesUrl 변경 — init_은 readonly이므로 cast
+    // 동적으로 backgroundKey 변경 — init_은 readonly이므로 cast
     const mutable = this.init_ as { sceneKey: string; backgroundKey: string; nodesUrl: string };
     mutable.backgroundKey = `bg_${data.airportKey}`;
-    mutable.nodesUrl = `/data/nodes-${data.airportKey}.json`;
+    mutable.nodesUrl = `/data/nodes-${data.airportKey}.json`;  // unused; 일관성 위해 갱신
   }
 
-  protected onNodeArrive(node: NodeConfig) {
-    const store = useGameStore.getState();
-    if (node.type === 'trigger' && node.action === 'airport_quiz') {
-      // React QuizModal이 phase를 보고 띄움.
-    } else if (node.type === 'exit' && node.action === 'next_phase') {
-      const nextPhase = this.computeNextPhase();
-      if (nextPhase) {
-        store.setPhase(nextPhase);
-        this.scene.start('worldmap');
+  protected onSceneReady() {
+    // QuizModal이 phase 보고 자동으로 띄움. 정답 시 phase가 worldmap_to_*로 바뀌면 여기서 씬 전환.
+    const unsub = useGameStore.subscribe((s, prev) => {
+      const justEnteredWorldmap =
+        prev.phase !== s.phase &&
+        (s.phase === 'worldmap_to_1' || s.phase === 'worldmap_to_2' || s.phase === 'worldmap_to_home');
+      if (justEnteredWorldmap) {
+        this.time.delayedCall(200, () => this.scene.start('worldmap'));
       }
-    }
-  }
-
-  private computeNextPhase() {
-    const { phase } = useGameStore.getState();
-    switch (phase) {
-      case 'airport_start': return 'worldmap_to_1' as const;
-      case 'airport_1':     return 'worldmap_to_2' as const;
-      case 'airport_2':     return 'worldmap_to_home' as const;
-      default: return null;
-    }
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsub);
   }
 }

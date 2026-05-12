@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
-const ALLOWED = new Set(['worldmap', 'korea']);
+const ALLOWED = new Set([
+  'worldmap', 'korea',
+  'country_finland_map', 'country_canada_map',
+  'country_dubai_map',   'country_egypt_map',
+]);
 
 export async function POST(req: NextRequest) {
   if (process.env.NODE_ENV === 'production') {

@@ -2,10 +2,40 @@
   "scene": "worldmap",
   "startNode": "korea",
   "nodes": [
-    { "id": "korea",   "x": 900, "y": 400, "type": "walk", "label": "🇰🇷 한국" },
-    { "id": "finland", "x": 700, "y": 200, "type": "walk", "label": "🇫🇮 핀란드" },
-    { "id": "canada",  "x": 300, "y": 250, "type": "walk", "label": "🇨🇦 캐나다" },
-    { "id": "dubai",   "x": 800, "y": 500, "type": "walk", "label": "🇦🇪 두바이" },
-    { "id": "egypt",   "x": 750, "y": 450, "type": "walk", "label": "🇪🇬 이집트" }
+    {
+      "id": "korea",
+      "x": 1016,
+      "y": 333,
+      "type": "walk",
+      "label": "🇰🇷 한국"
+    },
+    {
+      "id": "finland",
+      "x": 717,
+      "y": 226,
+      "type": "walk",
+      "label": "🇫🇮 핀란드"
+    },
+    {
+      "id": "canada",
+      "x": 249,
+      "y": 257,
+      "type": "walk",
+      "label": "🇨🇦 캐나다"
+    },
+    {
+      "id": "dubai",
+      "x": 799,
+      "y": 396,
+      "type": "walk",
+      "label": "🇦🇪 두바이"
+    },
+    {
+      "id": "egypt",
+      "x": 701,
+      "y": 427,
+      "type": "walk",
+      "label": "🇪🇬 이집트"
+    }
   ]
 }

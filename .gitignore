@@ -39,6 +39,9 @@ pnpm-debug.log*
 # claude session state (local)
 .claude/
 
+# serena MCP local state
+.serena/
+
 # next.js (create-next-app 추가본)
 yarn-error.log*
 

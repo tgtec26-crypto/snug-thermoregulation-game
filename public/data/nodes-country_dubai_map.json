@@ -1,0 +1,30 @@
+{
+  "scene": "country_dubai_map",
+  "startNode": "airport",
+  "nodes": [
+    {
+      "id": "airport",
+      "x": 1090,
+      "y": 240,
+      "type": "walk",
+      "label": "공항",
+      "labelSvg": "/assets/textbutton/dubai_airport_button.svg"
+    },
+    {
+      "id": "outdoor",
+      "x": 413,
+      "y": 47,
+      "type": "walk",
+      "label": "두바이 사막",
+      "labelSvg": "/assets/textbutton/dubai_desert_button.svg"
+    },
+    {
+      "id": "indoor",
+      "x": 263,
+      "y": 674,
+      "type": "walk",
+      "label": "스키 두바이",
+      "labelSvg": "/assets/textbutton/dubai_ski_button.svg"
+    }
+  ]
+}

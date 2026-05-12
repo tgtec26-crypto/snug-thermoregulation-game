@@ -1,10 +1,14 @@
 import { BaseGameScene } from './BaseGameScene';
-import type { NodeConfig } from '@/game/types';
 import { useGameStore } from '@/store/gameStore';
 
 export class EndingScene extends BaseGameScene {
   constructor() {
-    super({ sceneKey: 'ending', backgroundKey: 'bg_ending', nodesUrl: '/data/nodes-ending.json' });
+    super({
+      sceneKey: 'ending',
+      backgroundKey: 'bg_ending',
+      nodesUrl: '/data/nodes-ending.json',  // staticOverlay라 사용 안 됨
+      staticOverlay: true,
+    });
   }
 
   protected onSceneReady() {
@@ -12,13 +16,6 @@ export class EndingScene extends BaseGameScene {
     // 직접 EndingScene으로 점프하는 경로(테스트/디버그)도 안전하게 처리.
     if (useGameStore.getState().phase !== 'ending') {
       useGameStore.getState().setPhase('ending');
-    }
-  }
-
-  protected onNodeArrive(node: NodeConfig) {
-    if (node.id === 'podium' && node.action === 'ending_card') {
-      // React EndingCard가 phase = 'ending' 인데 podium 도착했음을 감지.
-      // 단순화: phase 유지. React가 카드 표시.
     }
   }
 }

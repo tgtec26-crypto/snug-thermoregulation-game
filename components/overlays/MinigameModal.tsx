@@ -16,6 +16,7 @@ export function MinigameModal() {
   const phase = useGameStore(s => s.phase);
   const adjustTemp = useGameStore(s => s.adjustTemp);
   const showToast = useGameStore(s => s.showToast);
+  const setPhase = useGameStore(s => s.setPhase);
 
   const [active, setActive] = useState(false);
   const [kind, setKind] = useState<MinigameKind>('shiver');
@@ -75,6 +76,16 @@ export function MinigameModal() {
       showToast(kindRef.current === 'shiver' ? '💪 떨림으로 열 발생! 체온 회복' : '💧 땀 발산! 체온 회복');
     } else {
       showToast('아쉽! 다음 단계로 갑니다');
+    }
+
+    // 미니게임 종료 → 국가 맵으로 복귀 (country_<slot>_arrived로 phase 설정)
+    // CountryScene이 이를 감지해서 CountryMapScene을 현재 area 위치로 띄움
+    const nextPhase: Phase | null =
+      phase === 'country_1_outdoor' || phase === 'country_1_indoor' ? 'country_1_arrived' :
+      phase === 'country_2_outdoor' || phase === 'country_2_indoor' ? 'country_2_arrived' :
+      null;
+    if (nextPhase) {
+      setTimeout(() => setPhase(nextPhase), 1500);  // 토스트 보이는 시간 확보
     }
   };
 

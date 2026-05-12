@@ -9,6 +9,8 @@ const ALLOWED_SCENES = new Set([
   'country_canada_outdoor', 'country_canada_indoor',
   'country_dubai_outdoor', 'country_dubai_indoor',
   'country_egypt_outdoor', 'country_egypt_indoor',
+  'country_finland_map', 'country_canada_map',
+  'country_dubai_map',   'country_egypt_map',
 ]);
 
 export async function POST(req: NextRequest) {

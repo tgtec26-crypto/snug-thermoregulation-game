@@ -8,7 +8,13 @@ export class BootScene extends Phaser.Scene {
   preload() {
     // 자산이 실제로 있으면 로드, 없으면 onerror 후 BootScene.create()에서 placeholder 생성
     BACKGROUNDS.forEach(b => this.load.image(b.key, b.path));
-    SPRITES.forEach(s => this.load.image(s.key, s.path));
+    SPRITES.forEach(s => {
+      if (s.type === 'spritesheet' && s.frameConfig) {
+        this.load.spritesheet(s.key, s.path, s.frameConfig);
+      } else {
+        this.load.image(s.key, s.path);
+      }
+    });
     COUNTRY_MAPS.forEach(m => this.load.image(m.key, m.path));
     MOVE_ASSETS.forEach(a => this.load.image(a.key, a.path));
 
@@ -34,20 +40,41 @@ export class BootScene extends Phaser.Scene {
       }
     });
 
-    // 플레이어 복장 placeholder (자산 없을 때만): 110×186 색사각형
-    const playerPlaceholders: Record<string, number> = {
+    // 플레이어 placeholder (자산 없을 때만): 캐릭터별·방향별 색사각형
+    const playerPlaceholderColors: Record<string, number> = {
       player_korea: 0x4488ff,
       player_cold:  0x88ccff,
       player_hot:   0xff8844,
     };
-    Object.entries(playerPlaceholders).forEach(([key, color]) => {
-      if (!this.textures.exists(key)) {
-        const g = this.add.graphics();
-        g.fillStyle(color, 1);
-        g.fillRect(0, 0, 110, 186);
-        g.generateTexture(key, 110, 186);
-        g.destroy();
-      }
+    (['player_korea', 'player_cold', 'player_hot'] as const).forEach(char => {
+      (['down', 'left', 'up', 'right'] as const).forEach(dir => {
+        const key = `${char}_walk_${dir}`;
+        if (!this.textures.exists(key)) {
+          const g = this.add.graphics();
+          g.fillStyle(playerPlaceholderColors[char], 1);
+          g.fillRect(0, 0, 85, 165);
+          g.generateTexture(key, 85, 165);
+          g.destroy();
+        }
+      });
+    });
+
+    // ── 플레이어 walk 애니메이션 생성 ──
+    // 각 방향별 PNG가 5프레임 가로 스트립 → 모두 frame 0..4. 8fps × 5 = 한 사이클 ~0.625s
+    (['player_korea', 'player_cold', 'player_hot'] as const).forEach(char => {
+      (['down', 'left', 'up', 'right'] as const).forEach(dir => {
+        const texKey = `${char}_walk_${dir}`;
+        const tex = this.textures.get(texKey);
+        if (!tex || tex.frameTotal <= 1) return;   // placeholder(단일 프레임)는 스킵
+        const animKey = `anim_${texKey}`;
+        if (this.anims.exists(animKey)) return;
+        this.anims.create({
+          key: animKey,
+          frames: this.anims.generateFrameNumbers(texKey, { start: 0, end: 4 }),
+          frameRate: 8,
+          repeat: -1,
+        });
+      });
     });
 
     // 첫 씬으로 전이

@@ -1,41 +1,15 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import type { SceneNodes, WorldmapPaths, WorldmapRouteKey, KoreaBusPath } from '@/game/types';
+import type {
+  SceneNodes, WorldmapPaths, WorldmapRouteKey, KoreaBusPath,
+  CountryMapPaths, CountryMapPathKey, CountryMapKey,
+} from '@/game/types';
 import { bezierSvgPath } from '@/game/utils/bezier';
 
-// ─── 노드 편집 ───────────────────────────────────────────────────────────────
-
-const SCENES = [
-  'classroom', 'airport_start',
-  'airport_finland', 'airport_canada', 'airport_dubai', 'airport_egypt',
-  'worldmap', 'ending',
-  'country_finland_outdoor', 'country_finland_indoor',
-  'country_canada_outdoor', 'country_canada_indoor',
-  'country_dubai_outdoor', 'country_dubai_indoor',
-  'country_egypt_outdoor', 'country_egypt_indoor',
-];
-
-const BG_BY_SCENE: Record<string, string> = {
-  classroom:                 '/assets/backgrounds/classroom_start.png',
-  airport_start:             '/assets/backgrounds/airport.png',
-  airport_finland:           '/assets/backgrounds/airport.png',
-  airport_canada:            '/assets/backgrounds/airport.png',
-  airport_dubai:             '/assets/backgrounds/airport.png',
-  airport_egypt:             '/assets/backgrounds/airport.png',
-  worldmap:                  '/assets/backgrounds/world_map.png',
-  ending:                    '/assets/backgrounds/ending.png',
-  country_finland_outdoor:   '/assets/backgrounds/finland_lapland.png',
-  country_finland_indoor:    '/assets/backgrounds/finland_sauna.png',
-  country_canada_outdoor:    '/assets/backgrounds/canada_yellowknife.png',
-  country_canada_indoor:     '/assets/backgrounds/canada_hotspring.png',
-  country_dubai_outdoor:     '/assets/backgrounds/dubai_desert.png',
-  country_dubai_indoor:      '/assets/backgrounds/dubai_ski.png',
-  country_egypt_outdoor:     '/assets/backgrounds/egypt_pyramid.png',
-  country_egypt_indoor:      '/assets/backgrounds/egypt_catacombs.png',
-};
-
 // ─── 경로 편집 ────────────────────────────────────────────────────────────────
+// 모든 단일 화면(classroom·airports·outdoor·indoor·ending)은 오버레이 기반 이벤트로 진행 →
+// 별도 노드 편집 불필요. 어드민은 경로(이동) 관련 데이터만 다룬다.
 
 const WORLDMAP_ROUTES: { key: WorldmapRouteKey; label: string }[] = [
   { key: 'korea_finland',  label: '한국 → 핀란드' },
@@ -59,24 +33,42 @@ const ROUTE_ENDPOINTS: Record<WorldmapRouteKey, { from: string; to: string }> = 
   egypt_korea:    { from: 'egypt',   to: 'korea'   },
 };
 
+// ─── 국가 맵 편집 ─────────────────────────────────────────────────────────────
+
+const COUNTRY_KEYS: CountryMapKey[] = ['finland', 'canada', 'dubai', 'egypt'];
+const COUNTRY_LABEL: Record<CountryMapKey, string> = {
+  finland: '🇫🇮 핀란드 맵',
+  canada:  '🇨🇦 캐나다 맵',
+  dubai:   '🇦🇪 두바이 맵',
+  egypt:   '🇪🇬 이집트 맵',
+};
+const COUNTRY_BG: Record<CountryMapKey, string> = {
+  finland: '/assets/backgrounds/Finland_map.png',
+  canada:  '/assets/backgrounds/canada_map.png',
+  dubai:   '/assets/backgrounds/dubai_map.png',
+  egypt:   '/assets/backgrounds/egypt_map.png',
+};
+const COUNTRY_ROUTES: { key: CountryMapPathKey; label: string; color: string; from: 'airport'|'outdoor'|'indoor'; to: 'airport'|'outdoor'|'indoor' }[] = [
+  { key: 'airport_outdoor', label: '공항→야외', color: '#22c55e', from: 'airport', to: 'outdoor' },
+  { key: 'outdoor_indoor',  label: '야외→실내', color: '#f97316', from: 'outdoor', to: 'indoor'  },
+  { key: 'indoor_airport',  label: '실내→공항', color: '#a855f7', from: 'indoor',  to: 'airport' },
+];
+const DEST_COLOR: Record<'airport'|'outdoor'|'indoor', string> = {
+  airport: '#3b82f6',  // 파랑
+  outdoor: '#84cc16',  // 라임
+  indoor:  '#ec4899',  // 핑크
+};
+const DEST_EMOJI: Record<'airport'|'outdoor'|'indoor', string> = {
+  airport: '✈️',
+  outdoor: '🌄',
+  indoor:  '🏠',
+};
+
 // ─── 컴포넌트 ─────────────────────────────────────────────────────────────────
 
-type AdminMode = 'nodes' | 'paths';
-type PathMode  = 'worldmap' | 'korea';
+type PathMode = 'worldmap' | 'korea' | 'countrymap';
 
 export default function AdminPage() {
-  // ── 노드 편집 상태 ──
-  const [scene, setScene]         = useState('classroom');
-  const [nodeData, setNodeData]   = useState<SceneNodes | null>(null);
-  const [nodeDrag, setNodeDrag]   = useState<string | null>(null);
-  const nodeWrapRef               = useRef<HTMLDivElement>(null);
-  const [nodeSaved, setNodeSaved] = useState(false);
-
-  // 노드 추가 폼
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newId, setNewId]     = useState('');
-  const [newType, setNewType] = useState<'walk' | 'trigger' | 'exit'>('walk');
-
   // ── 경로 편집 상태 ──
   const [pathMode, setPathMode]         = useState<PathMode>('worldmap');
   const [selectedRoute, setSelectedRoute] = useState<WorldmapRouteKey>('korea_finland');
@@ -87,57 +79,25 @@ export default function AdminPage() {
   const pathWrapRef                       = useRef<HTMLDivElement>(null);
   const [pathSaved, setPathSaved]         = useState(false);
 
-  // ── 공통 ──
-  const [mode, setMode] = useState<AdminMode>('nodes');
-
-  // 노드 데이터 로드
-  useEffect(() => {
-    if (mode !== 'nodes') return;
-    fetch(`/data/nodes-${scene}.json`).then(r => r.json()).then(setNodeData);
-  }, [scene, mode]);
+  // ── 국가 맵 편집 상태 ──
+  const [country, setCountry]             = useState<CountryMapKey>('finland');
+  const [countryNodes, setCountryNodes]   = useState<SceneNodes | null>(null);
+  const [countryPaths, setCountryPaths]   = useState<CountryMapPaths | null>(null);
 
   // 경로 데이터 로드
   useEffect(() => {
-    if (mode !== 'paths') return;
     fetch('/data/paths-worldmap.json').then(r => r.json()).then(setWorldmapPaths);
     fetch('/data/nodes-worldmap.json').then(r => r.json()).then(setWorldmapNodes);
     fetch('/data/paths-korea.json').then(r => r.json()).then(setKoreaPaths);
-  }, [mode]);
+  }, []);
 
-  // ── 노드 편집 핸들러 ──
-  const onNodeMouseMove = (e: React.MouseEvent) => {
-    if (!nodeDrag || !nodeData || !nodeWrapRef.current) return;
-    const rect = nodeWrapRef.current.getBoundingClientRect();
-    const x = Math.round((e.clientX - rect.left) * (1280 / rect.width));
-    const y = Math.round((e.clientY - rect.top)  * (800  / rect.height));
-    setNodeData({ ...nodeData, nodes: nodeData.nodes.map(n => n.id === nodeDrag ? { ...n, x, y } : n) });
-  };
-
-  const addNode = () => {
-    const id = newId.trim();
-    if (!id || !nodeData) return;
-    if (nodeData.nodes.some(n => n.id === id)) {
-      alert(`이미 존재하는 id: "${id}"`);
-      return;
-    }
-    setNodeData({
-      ...nodeData,
-      nodes: [...nodeData.nodes, { id, x: 640, y: 400, type: newType }],
-    });
-    setNewId('');
-    setShowAddForm(false);
-  };
-
-  const saveNodes = async () => {
-    if (!nodeData) return;
-    const res = await fetch('/api/nodes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scene, payload: nodeData }),
-    });
-    if (res.ok) { setNodeSaved(true); setTimeout(() => setNodeSaved(false), 1500); }
-    else alert('저장 실패: ' + await res.text());
-  };
+  // 국가 맵 데이터 로드 (국가 변경 시마다)
+  useEffect(() => {
+    if (pathMode !== 'countrymap') return;
+    const scene = `country_${country}_map`;
+    fetch(`/data/nodes-${scene}.json`).then(r => r.json()).then(setCountryNodes);
+    fetch(`/data/paths-${scene}.json`).then(r => r.json()).then(setCountryPaths);
+  }, [pathMode, country]);
 
   // ── 경로 편집 핸들러 ──
   const onPathMouseMove = (e: React.MouseEvent) => {
@@ -147,27 +107,114 @@ export default function AdminPage() {
     const y = Math.round((e.clientY - rect.top)  * (800  / rect.height));
 
     if (pathMode === 'worldmap' && worldmapPaths) {
-      const cur = worldmapPaths[selectedRoute];
-      setWorldmapPaths({
-        ...worldmapPaths,
-        [selectedRoute]: {
-          cp1: pathDrag === 'cp1' ? { x, y } : cur.cp1,
-          cp2: pathDrag === 'cp2' ? { x, y } : cur.cp2,
-        },
-      });
+      if (pathDrag.startsWith('node:') && worldmapNodes) {
+        const id = pathDrag.slice(5);
+        setWorldmapNodes({
+          ...worldmapNodes,
+          nodes: worldmapNodes.nodes.map(n => n.id === id ? { ...n, x, y } : n),
+        });
+      } else {
+        const cur = worldmapPaths[selectedRoute];
+        setWorldmapPaths({
+          ...worldmapPaths,
+          [selectedRoute]: {
+            cp1: pathDrag === 'cp1' ? { x, y } : cur.cp1,
+            cp2: pathDrag === 'cp2' ? { x, y } : cur.cp2,
+          },
+        });
+      }
     } else if (pathMode === 'korea' && koreaPaths) {
       setKoreaPaths({ ...koreaPaths, [pathDrag]: { x, y } });
+    } else if (pathMode === 'countrymap') {
+      if (pathDrag.startsWith('node:') && countryNodes) {
+        const id = pathDrag.slice(5);
+        setCountryNodes({
+          ...countryNodes,
+          nodes: countryNodes.nodes.map(n => n.id === id ? { ...n, x, y } : n),
+        });
+      } else if (pathDrag.startsWith('wp:') && countryPaths) {
+        const [, route, idxStr] = pathDrag.split(':');
+        const routeKey = route as CountryMapPathKey;
+        const i = parseInt(idxStr, 10);
+        setCountryPaths({
+          ...countryPaths,
+          [routeKey]: {
+            waypoints: countryPaths[routeKey].waypoints.map((w, j) => j === i ? { x, y } : w),
+          },
+        });
+      }
     }
   };
 
+  const addWaypoint = (route: CountryMapPathKey) => {
+    if (!countryPaths || !countryNodes) return;
+    const cfg = COUNTRY_ROUTES.find(r => r.key === route)!;
+    const fromN = countryNodes.nodes.find(n => n.id === cfg.from);
+    const toN   = countryNodes.nodes.find(n => n.id === cfg.to);
+    if (!fromN || !toN) return;
+    const wps = countryPaths[route].waypoints;
+    const lastPt = wps.length > 0 ? wps[wps.length - 1] : { x: fromN.x, y: fromN.y };
+    const newWp = { x: Math.round((lastPt.x + toN.x) / 2), y: Math.round((lastPt.y + toN.y) / 2) };
+    setCountryPaths({
+      ...countryPaths,
+      [route]: { waypoints: [...wps, newWp] },
+    });
+  };
+
+  const removeWaypoint = (route: CountryMapPathKey, i: number) => {
+    if (!countryPaths) return;
+    setCountryPaths({
+      ...countryPaths,
+      [route]: { waypoints: countryPaths[route].waypoints.filter((_, j) => j !== i) },
+    });
+  };
+
   const savePaths = async () => {
-    const pathType = pathMode;
-    const payload  = pathMode === 'worldmap' ? worldmapPaths : koreaPaths;
-    if (!payload) return;
+    if (pathMode === 'countrymap') {
+      if (!countryNodes || !countryPaths) return;
+      const scene = `country_${country}_map`;
+      const [r1, r2] = await Promise.all([
+        fetch('/api/nodes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scene, payload: countryNodes }),
+        }),
+        fetch('/api/paths', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pathType: scene, payload: countryPaths }),
+        }),
+      ]);
+      if (r1.ok && r2.ok) { setPathSaved(true); setTimeout(() => setPathSaved(false), 1500); }
+      else alert('저장 실패 (국가 맵)');
+      return;
+    }
+
+    if (pathMode === 'worldmap') {
+      if (!worldmapPaths || !worldmapNodes) return;
+      const [r1, r2] = await Promise.all([
+        fetch('/api/paths', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pathType: 'worldmap', payload: worldmapPaths }),
+        }),
+        fetch('/api/nodes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scene: 'worldmap', payload: worldmapNodes }),
+        }),
+      ]);
+      if (r1.ok && r2.ok) { setPathSaved(true); setTimeout(() => setPathSaved(false), 1500); }
+      else alert('저장 실패 (worldmap)');
+      return;
+    }
+
+    // korea
+    if (!koreaPaths) return;
     const res = await fetch('/api/paths', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pathType, payload }),
+      body: JSON.stringify({ pathType: 'korea', payload: koreaPaths }),
     });
     if (res.ok) { setPathSaved(true); setTimeout(() => setPathSaved(false), 1500); }
     else alert('저장 실패: ' + await res.text());
@@ -189,127 +236,21 @@ export default function AdminPage() {
   // ── 렌더 ─────────────────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-slate-900 text-white p-4 flex flex-col gap-4">
-      {/* 모드 탭 */}
       <header className="flex items-center gap-2">
-        <h1 className="text-xl font-bold mr-2">Admin</h1>
-        {(['nodes', 'paths'] as AdminMode[]).map(m => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`px-3 py-1 rounded text-sm ${mode === m ? 'bg-sky-600' : 'bg-slate-700 hover:bg-slate-600'}`}
-          >
-            {m === 'nodes' ? '노드 편집' : '경로 편집'}
-          </button>
-        ))}
+        <h1 className="text-xl font-bold mr-2">Admin · 경로 편집</h1>
+        <span className="text-xs text-slate-400">단일 화면(교실·공항·실내외·결말)은 오버레이 이벤트로 진행 — 노드 편집 불필요</span>
       </header>
 
-      {/* ── 노드 편집 ──────────────────────────────────────────────────────── */}
-      {mode === 'nodes' && (
-        <>
-          <div className="flex items-center gap-3 flex-wrap">
-            <select
-              value={scene}
-              onChange={e => { setScene(e.target.value); setShowAddForm(false); }}
-              className="bg-slate-700 border border-slate-600 rounded px-2 py-1"
-            >
-              {SCENES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <button
-              onClick={() => setShowAddForm(v => !v)}
-              className="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded"
-            >
-              + 노드 추가
-            </button>
-            <button onClick={saveNodes} className="bg-sky-600 hover:bg-sky-700 px-3 py-1 rounded">저장</button>
-            {nodeSaved && <span className="text-green-400">✅ 저장 완료</span>}
-          </div>
-
-          {/* 노드 추가 폼 */}
-          {showAddForm && (
-            <div className="flex items-center gap-2 bg-slate-800 border border-slate-600 rounded px-3 py-2 w-fit">
-              <input
-                type="text"
-                placeholder="노드 id (예: npc_1)"
-                value={newId}
-                onChange={e => setNewId(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && addNode()}
-                className="bg-slate-700 border border-slate-500 rounded px-2 py-1 text-sm w-44 focus:outline-none focus:border-sky-400"
-                autoFocus
-              />
-              <select
-                value={newType}
-                onChange={e => setNewType(e.target.value as 'walk' | 'trigger' | 'exit')}
-                className="bg-slate-700 border border-slate-500 rounded px-2 py-1 text-sm"
-              >
-                <option value="walk">walk</option>
-                <option value="trigger">trigger</option>
-                <option value="exit">exit</option>
-              </select>
-              <button
-                onClick={addNode}
-                disabled={!newId.trim()}
-                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 px-3 py-1 rounded text-sm"
-              >
-                추가
-              </button>
-              <button
-                onClick={() => setShowAddForm(false)}
-                className="text-slate-400 hover:text-white text-sm px-2"
-              >
-                취소
-              </button>
-              <span className="text-slate-400 text-xs">추가 후 캔버스에서 드래그로 위치 조정</span>
-            </div>
-          )}
-
-          <div
-            ref={nodeWrapRef}
-            className="relative border border-slate-600 mx-auto"
-            style={{ width: '100%', maxWidth: 1280, aspectRatio: '16 / 10' }}
-            onMouseMove={onNodeMouseMove}
-            onMouseUp={() => setNodeDrag(null)}
-            onMouseLeave={() => setNodeDrag(null)}
-          >
-            <img
-              src={BG_BY_SCENE[scene]}
-              alt=""
-              className="absolute inset-0 w-full h-full object-fill"
-              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-            />
-            <div className="absolute inset-0 bg-slate-200/40" />
-            {nodeData?.nodes.map(n => (
-              <div
-                key={n.id}
-                onMouseDown={e => { e.preventDefault(); setNodeDrag(n.id); }}
-                className="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing"
-                style={{ left: pct(n.x, 1280), top: pct(n.y, 800) }}
-              >
-                <div className={`w-6 h-6 rounded-full border-2 border-white shadow-md ${
-                  n.type === 'trigger' ? 'bg-yellow-400' : n.type === 'exit' ? 'bg-green-400' : 'bg-slate-400'
-                }`} />
-                <div className="text-xs bg-black/70 text-white px-1.5 py-0.5 rounded mt-0.5 whitespace-nowrap">
-                  {n.id} ({n.x}, {n.y})
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-sm text-slate-400 mx-auto">
-            노드를 드래그해서 위치 조정 후 &quot;저장&quot;. 노란=trigger, 녹색=exit, 회색=walk.
-          </p>
-        </>
-      )}
-
       {/* ── 경로 편집 ──────────────────────────────────────────────────────── */}
-      {mode === 'paths' && (
-        <>
+      <>
           <div className="flex items-center gap-3 flex-wrap">
-            {(['worldmap', 'korea'] as PathMode[]).map(pm => (
+            {(['worldmap', 'korea', 'countrymap'] as PathMode[]).map(pm => (
               <button
                 key={pm}
                 onClick={() => setPathMode(pm)}
                 className={`px-3 py-1 rounded text-sm ${pathMode === pm ? 'bg-indigo-600' : 'bg-slate-700 hover:bg-slate-600'}`}
               >
-                {pm === 'worldmap' ? '세계지도 비행 경로' : '버스 경로(한국)'}
+                {pm === 'worldmap' ? '세계지도 비행 경로' : pm === 'korea' ? '버스 경로(한국)' : '국가 맵 (맨해튼 경로)'}
               </button>
             ))}
             {pathMode === 'worldmap' && (
@@ -321,9 +262,44 @@ export default function AdminPage() {
                 {WORLDMAP_ROUTES.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
               </select>
             )}
+            {pathMode === 'countrymap' && (
+              <select
+                value={country}
+                onChange={e => setCountry(e.target.value as CountryMapKey)}
+                className="bg-slate-700 border border-slate-600 rounded px-2 py-1"
+              >
+                {COUNTRY_KEYS.map(c => <option key={c} value={c}>{COUNTRY_LABEL[c]}</option>)}
+              </select>
+            )}
             <button onClick={savePaths} className="bg-sky-600 hover:bg-sky-700 px-3 py-1 rounded ml-auto">저장</button>
             {pathSaved && <span className="text-green-400">✅ 저장 완료</span>}
           </div>
+
+          {/* 경로별 컨트롤 패널 (countrymap 전용) */}
+          {pathMode === 'countrymap' && countryPaths && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {COUNTRY_ROUTES.map(r => (
+                <div key={r.key} className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded px-3 py-1.5">
+                  <span className="text-sm font-semibold" style={{ color: r.color }}>{r.label}</span>
+                  <span className="text-xs text-slate-400">웨이포인트 {countryPaths[r.key].waypoints.length}개</span>
+                  <button
+                    onClick={() => addWaypoint(r.key)}
+                    className="bg-emerald-700 hover:bg-emerald-600 text-xs px-2 py-0.5 rounded"
+                  >
+                    + WP
+                  </button>
+                  {countryPaths[r.key].waypoints.length > 0 && (
+                    <button
+                      onClick={() => removeWaypoint(r.key, countryPaths[r.key].waypoints.length - 1)}
+                      className="bg-rose-700 hover:bg-rose-600 text-xs px-2 py-0.5 rounded"
+                    >
+                      − 마지막
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div
             ref={pathWrapRef}
@@ -335,7 +311,11 @@ export default function AdminPage() {
           >
             {/* 배경 */}
             <img
-              src={pathMode === 'worldmap' ? '/assets/backgrounds/world_map.png' : '/assets/backgrounds/school_to_airport.png'}
+              src={
+                pathMode === 'worldmap'   ? '/assets/backgrounds/world_map.png'
+              : pathMode === 'korea'      ? '/assets/backgrounds/school_to_airport.png'
+              :                             COUNTRY_BG[country]
+              }
               alt=""
               className="absolute inset-0 w-full h-full object-fill"
               onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
@@ -375,33 +355,39 @@ export default function AdminPage() {
                     <line x1={p1.x} y1={p1.y} x2={cp2.x} y2={cp2.y} stroke="#ff990066" strokeWidth="1.5" strokeDasharray="3 2" />
                   </svg>
 
-                  {/* 국가 노드 (고정) */}
+                  {/* 국가 노드 — 드래그 가능 (마커=wrapper 크기, 라벨은 absolute로 위치 영향 X) */}
                   {worldmapNodes?.nodes.map(n => (
-                    <div key={n.id} className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                      style={{ left: pct(n.x, 1280), top: pct(n.y, 800) }}>
-                      <div className="w-4 h-4 rounded-full bg-white/70 border border-white shadow" />
-                      <div className="text-[10px] bg-black/60 text-white px-1 rounded mt-0.5 whitespace-nowrap">{n.label ?? n.id}</div>
+                    <div
+                      key={n.id}
+                      onMouseDown={e => { e.preventDefault(); setPathDrag(`node:${n.id}`); }}
+                      className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-30"
+                      style={{ left: pct(n.x, 1280), top: pct(n.y, 800) }}
+                    >
+                      <div className="w-full h-full rounded-full bg-white border-2 border-sky-400 shadow" />
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 text-[10px] bg-black/70 text-white px-1 rounded whitespace-nowrap pointer-events-none">
+                        {n.label ?? n.id} ({n.x},{n.y})
+                      </div>
                     </div>
                   ))}
 
-                  {/* cp1 드래그 핸들 */}
+                  {/* cp1 드래그 핸들 — wrapper=다이아 크기, 라벨 absolute, z-40 (국가 노드 위) */}
                   <div
                     onMouseDown={e => { e.preventDefault(); setPathDrag('cp1'); }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-10"
+                    className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-40"
                     style={{ left: pct(cp1.x, 1280), top: pct(cp1.y, 800) }}
                   >
-                    <div className="w-5 h-5 bg-orange-400 border-2 border-white shadow-lg rotate-45" />
-                    <div className="text-[10px] bg-black/70 text-white px-1 rounded mt-1 whitespace-nowrap">cp1 ({cp1.x},{cp1.y})</div>
+                    <div className="w-full h-full bg-orange-400 border-2 border-white shadow-lg rotate-45" />
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 text-[10px] bg-black/70 text-white px-1 rounded whitespace-nowrap pointer-events-none">cp1 ({cp1.x},{cp1.y})</div>
                   </div>
 
                   {/* cp2 드래그 핸들 */}
                   <div
                     onMouseDown={e => { e.preventDefault(); setPathDrag('cp2'); }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-10"
+                    className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-40"
                     style={{ left: pct(cp2.x, 1280), top: pct(cp2.y, 800) }}
                   >
-                    <div className="w-5 h-5 bg-yellow-400 border-2 border-white shadow-lg rotate-45" />
-                    <div className="text-[10px] bg-black/70 text-white px-1 rounded mt-1 whitespace-nowrap">cp2 ({cp2.x},{cp2.y})</div>
+                    <div className="w-full h-full bg-yellow-400 border-2 border-white shadow-lg rotate-45" />
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 text-[10px] bg-black/70 text-white px-1 rounded whitespace-nowrap pointer-events-none">cp2 ({cp2.x},{cp2.y})</div>
                   </div>
                 </>
               );
@@ -454,15 +440,120 @@ export default function AdminPage() {
                 </>
               );
             })()}
+
+            {/* ── 국가 맵 (맨해튼 경로) ── */}
+            {pathMode === 'countrymap' && countryNodes && countryPaths && (() => {
+              const destOf = (id: 'airport'|'outdoor'|'indoor') => countryNodes.nodes.find(n => n.id === id);
+              return (
+                <>
+                  {/* SVG 폴리라인 (3개 경로) */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1280 800" preserveAspectRatio="none">
+                    {COUNTRY_ROUTES.map(r => {
+                      const fromN = destOf(r.from);
+                      const toN   = destOf(r.to);
+                      if (!fromN || !toN) return null;
+                      const pts = [
+                        { x: fromN.x, y: fromN.y },
+                        ...countryPaths[r.key].waypoints,
+                        { x: toN.x, y: toN.y },
+                      ];
+                      const ptsStr = pts.map(p => `${p.x},${p.y}`).join(' ');
+                      return (
+                        <g key={r.key}>
+                          <polyline points={ptsStr} stroke={r.color} strokeWidth="3" fill="none" strokeDasharray="8 4" strokeLinecap="round" strokeLinejoin="round" />
+                          {/* 방향 화살표 (마지막 세그먼트 중간점에) */}
+                          {pts.length >= 2 && (() => {
+                            const p1 = pts[pts.length - 2];
+                            const p2 = pts[pts.length - 1];
+                            const mx = (p1.x + p2.x) / 2;
+                            const my = (p1.y + p2.y) / 2;
+                            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+                            return (
+                              <polygon
+                                points="0,-7 12,0 0,7"
+                                fill={r.color}
+                                transform={`translate(${mx} ${my}) rotate(${angle})`}
+                              />
+                            );
+                          })()}
+                        </g>
+                      );
+                    })}
+                  </svg>
+
+                  {/* 웨이포인트 핸들 (드래그 가능, 작은 다이아) — 마커만 wrapper 크기 결정, 라벨은 absolute */}
+                  {COUNTRY_ROUTES.map(r =>
+                    countryPaths[r.key].waypoints.map((wp, i) => (
+                      <div
+                        key={`${r.key}-wp-${i}`}
+                        onMouseDown={e => { e.preventDefault(); setPathDrag(`wp:${r.key}:${i}`); }}
+                        onContextMenu={e => { e.preventDefault(); removeWaypoint(r.key, i); }}
+                        className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-20"
+                        style={{ left: pct(wp.x, 1280), top: pct(wp.y, 800) }}
+                        title="드래그=이동, 우클릭=삭제"
+                      >
+                        <div
+                          className="w-full h-full border-2 border-white shadow-md rotate-45"
+                          style={{ background: r.color }}
+                        />
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 text-[10px] bg-black/70 text-white px-1 rounded whitespace-nowrap pointer-events-none">
+                          {r.label.split('→')[0]}#{i} ({wp.x},{wp.y})
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {/* 목적지 노드 3개 — labelSvg 있으면 SVG 버튼, 없으면 색상 원 fallback */}
+                  {(['airport', 'outdoor', 'indoor'] as const).map(id => {
+                    const n = destOf(id);
+                    if (!n) return null;
+                    const hasSvg = !!n.labelSvg;
+                    return (
+                      <div
+                        key={id}
+                        onMouseDown={e => { e.preventDefault(); setPathDrag(`node:${id}`); }}
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-30 ${hasSvg ? '' : 'w-8 h-8'}`}
+                        style={{ left: pct(n.x, 1280), top: pct(n.y, 800) }}
+                      >
+                        {hasSvg ? (
+                          <div
+                            className="rounded-md bg-white/95 shadow-lg border-2 px-1 py-0.5"
+                            style={{ borderColor: DEST_COLOR[id] }}
+                          >
+                            <img
+                              src={n.labelSvg}
+                              alt={n.label ?? id}
+                              className="block h-8 w-auto pointer-events-none"
+                              draggable={false}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className="w-full h-full rounded-full border-2 border-white shadow-lg flex items-center justify-center text-base"
+                            style={{ background: DEST_COLOR[id] }}
+                          >
+                            {DEST_EMOJI[id]}
+                          </div>
+                        )}
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 text-[10px] bg-black/70 text-white px-1 rounded whitespace-nowrap pointer-events-none">
+                          {n.label ?? id} ({n.x},{n.y})
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })()}
           </div>
 
           <p className="text-sm text-slate-400 mx-auto">
             {pathMode === 'worldmap'
-              ? '🔶 주황 다이아몬드(cp1·cp2)를 드래그해 베지어 곡선 조정 → 저장'
-              : '🔵 파란=학교, 보라=공항 (위치 조정 가능), 🔶 다이아몬드=제어점 → 저장'}
+              ? '⚪ 흰 원 = 국가 노드(드래그로 위치 이동), 🔶 다이아몬드(cp1·cp2) = 베지어 제어점 → 저장 시 노드+경로 동시 저장'
+            : pathMode === 'korea'
+              ? '🔵 파란=학교, 보라=공항 (위치 조정 가능), 🔶 다이아몬드=제어점 → 저장'
+            : '✈️ 공항·🌄 야외·🏠 실내 노드 드래그로 위치 조정 / 다이아몬드 = 웨이포인트(드래그 이동, 우클릭 삭제) / + WP 버튼으로 추가 → 저장'}
           </p>
-        </>
-      )}
+      </>
     </main>
   );
 }
