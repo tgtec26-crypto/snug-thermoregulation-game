@@ -1,0 +1,136 @@
+import type { QuizQuestion } from '@/game/types';
+
+export const QUIZ_POOL: QuizQuestion[] = [
+  // === cold_response (추울 때 반응) ===
+  {
+    id: 'c1',
+    category: 'cold_response',
+    question: '추운 환경에 노출되었을 때, 피부의 혈관에서 일어나는 변화는?',
+    choices: ['확장된다', '수축한다', '없어진다', '두꺼워진다'],
+    answerIndex: 1,
+    explanation: '👍 혈관이 수축해서 피부 표면의 열 손실을 줄여요.',
+  },
+  {
+    id: 'c2',
+    category: 'cold_response',
+    question: '추울 때 근육이 떨리는 까닭은?',
+    choices: ['열을 발산하기 위해', '열을 발생시키기 위해', '땀을 내기 위해', '혈관을 식히기 위해'],
+    answerIndex: 1,
+    explanation: '👍 근육 떨림은 열을 발생시켜 체온을 유지해요.',
+  },
+  {
+    id: 'c3',
+    category: 'cold_response',
+    question: '추울 때 갑상샘에서 분비량이 증가하는 호르몬은?',
+    choices: ['인슐린', '글루카곤', '티록신', '아드레날린'],
+    answerIndex: 2,
+    explanation: '👍 티록신은 세포 호흡을 촉진해 열 발생을 늘려요.',
+  },
+  {
+    id: 'c4',
+    category: 'cold_response',
+    question: '티록신이 체온 조절에서 하는 일은?',
+    choices: ['땀을 내게 한다', '세포 호흡을 촉진해 열을 만든다', '혈관을 확장한다', '근육을 식힌다'],
+    answerIndex: 1,
+    explanation: '👍 티록신 → 세포 호흡 ↑ → 열 발생 ↑.',
+  },
+  {
+    id: 'c5',
+    category: 'cold_response',
+    question: '추울 때 우리 몸이 보이는 반응이 아닌 것은?',
+    choices: ['혈관 수축', '근육 떨림', '땀 분비 증가', '티록신 증가'],
+    answerIndex: 2,
+    explanation: '👍 땀은 더울 때 늘어나요. 추울 때는 줄어들어요.',
+  },
+
+  // === hot_response (더울 때 반응) ===
+  {
+    id: 'h1',
+    category: 'hot_response',
+    question: '더운 환경에 노출되었을 때, 피부의 혈관에서 일어나는 변화는?',
+    choices: ['수축한다', '확장한다', '두꺼워진다', '얇아진다'],
+    answerIndex: 1,
+    explanation: '👍 혈관이 확장되어 피부 표면으로 열을 더 많이 내보내요.',
+  },
+  {
+    id: 'h2',
+    category: 'hot_response',
+    question: '땀이 증발할 때 우리 몸에서 일어나는 일은?',
+    choices: ['열을 흡수해 체온을 낮춘다', '열을 더 발생시킨다', '아무 변화 없다', '근육이 떨린다'],
+    answerIndex: 0,
+    explanation: '👍 땀이 증발할 때 기화열로 열을 가져가서 체온이 내려가요.',
+  },
+  {
+    id: 'h3',
+    category: 'hot_response',
+    question: '운동 후 얼굴이 빨개지는 까닭은?',
+    choices: ['혈관이 수축해서', '혈관이 확장되어 열을 발산해서', '땀이 멈춰서', '근육이 떨려서'],
+    answerIndex: 1,
+    explanation: '👍 혈관 확장으로 피부에 피가 많이 가서 열을 더 발산해요.',
+  },
+  {
+    id: 'h4',
+    category: 'hot_response',
+    question: '더울 때 우리 몸이 보이는 반응이 아닌 것은?',
+    choices: ['혈관 확장', '땀 분비 증가', '근육 떨림', '기화열 발산'],
+    answerIndex: 2,
+    explanation: '👍 근육 떨림은 추울 때 일어나요.',
+  },
+  {
+    id: 'h5',
+    category: 'hot_response',
+    question: '기화열이란?',
+    choices: ['물이 끓을 때 나오는 열', '물이 증발할 때 흡수하는 열', '얼음이 녹을 때 내는 열', '근육이 만드는 열'],
+    answerIndex: 1,
+    explanation: '👍 물(땀)이 수증기가 될 때 주변 열을 흡수해요.',
+  },
+
+  // === neuro_vs_hormone (신경 vs 호르몬 비교) ===
+  {
+    id: 'n1',
+    category: 'neuro_vs_hormone',
+    question: '신경 작용의 특징은?',
+    choices: ['느리고 지속적', '빠르고 일시적', '느리고 일시적', '빠르고 지속적'],
+    answerIndex: 1,
+    explanation: '👍 신경은 빠르게 작용하고 그 효과가 짧아요.',
+  },
+  {
+    id: 'n2',
+    category: 'neuro_vs_hormone',
+    question: '호르몬 작용의 특징은?',
+    choices: ['빠르고 일시적', '느리지만 지속적', '느리고 일시적', '빠르고 지속적'],
+    answerIndex: 1,
+    explanation: '👍 호르몬은 천천히 시작되지만 효과가 오래 지속돼요.',
+  },
+  {
+    id: 'n3',
+    category: 'neuro_vs_hormone',
+    question: '체온 조절에서 신경 작용에 해당하는 것은?',
+    choices: ['티록신 분비', '혈관 수축', '항이뇨호르몬', '인슐린'],
+    answerIndex: 1,
+    explanation: '👍 혈관 수축은 자율신경계가 즉시 일으키는 반응이에요.',
+  },
+  {
+    id: 'n4',
+    category: 'neuro_vs_hormone',
+    question: '체온 조절에서 호르몬 작용에 해당하는 것은?',
+    choices: ['근육 떨림', '땀 분비', '티록신에 의한 세포 호흡 촉진', '혈관 확장'],
+    answerIndex: 2,
+    explanation: '👍 티록신은 호르몬이고, 세포 호흡 촉진으로 열을 만들어요.',
+  },
+  {
+    id: 'n5',
+    category: 'neuro_vs_hormone',
+    question: '체온 조절의 중추 기관은?',
+    choices: ['소뇌', '연수', '간뇌', '척수'],
+    answerIndex: 2,
+    explanation: '👍 간뇌가 체온 조절의 중추예요. 피부의 온도 정보를 받아 신경·호르몬을 조절해요.',
+  },
+];
+
+export function drawQuiz(excludeIds: string[]): QuizQuestion | null {
+  const available = QUIZ_POOL.filter(q => !excludeIds.includes(q.id));
+  if (available.length === 0) return null;
+  const idx = Math.floor(Math.random() * available.length);
+  return available[idx];
+}
