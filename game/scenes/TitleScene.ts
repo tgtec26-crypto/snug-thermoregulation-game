@@ -26,5 +26,10 @@ export class TitleScene extends Phaser.Scene {
       }
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsub);
+
+    // 방어적 idempotency check: TitleScene 부팅 전에 이미 classroom_intro로 전환된 경우
+    if (useGameStore.getState().phase === 'classroom_intro') {
+      this.scene.start('classroom');
+    }
   }
 }

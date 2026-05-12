@@ -49,6 +49,6 @@ export class BootScene extends Phaser.Scene {
     }
 
     // 첫 씬으로 전이 (TitleScene이 만들어진 다음 단계에서 활성화)
-    this.scene.start('TitleScene');
+    this.scene.start('title');
   }
 }

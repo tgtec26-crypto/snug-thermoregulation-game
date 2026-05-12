@@ -8,7 +8,11 @@ export class EndingScene extends BaseGameScene {
   }
 
   protected onSceneReady() {
-    useGameStore.getState().setPhase('ending');
+    // 통상 WorldMapScene이 이미 phase='ending'으로 설정한 상태이지만,
+    // 직접 EndingScene으로 점프하는 경로(테스트/디버그)도 안전하게 처리.
+    if (useGameStore.getState().phase !== 'ending') {
+      useGameStore.getState().setPhase('ending');
+    }
   }
 
   protected onNodeArrive(node: NodeConfig) {
