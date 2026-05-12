@@ -1,0 +1,227 @@
+<h2>Q5 수정: 체온 막대형 HUD (snug-online-office 스타일 차용)</h2>
+<p class="subtitle">체온이 실제 게임 변수가 됐으니 막대를 중심 시각 요소로 격상. 색상 영역(저/적정/고) + 눈금 + 슬라이더 + 보조 인디케이터.</p>
+
+<style>
+  .frame2 {
+    width: 100%;
+    aspect-ratio: 16/10;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.12);
+    position: relative;
+    overflow: hidden;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    display: flex;
+  }
+  .frame2.cold { background: linear-gradient(180deg, #b6dcff 0%, #e8f4ff 60%, #d4e8ff 100%); }
+  .frame2.hot { background: linear-gradient(180deg, #ffe2b8 0%, #ffd28a 60%, #f4c177 100%); }
+
+  .game-area {
+    flex: 1;
+    position: relative;
+  }
+  .ga-ground { position:absolute; bottom:0; left:0; right:0; height:30%; }
+  .frame2.cold .ga-ground { background:#eaeef4; border-top: 2px dashed #a8b8c8; }
+  .frame2.hot .ga-ground { background:#f7d7ad; border-top: 2px dashed #c89a5a; }
+  .ga-char { position:absolute; left:40%; bottom:30%; font-size: 3em; }
+  .ga-snow { position:absolute; color:#fff; opacity:0.85; }
+  .ga-snow.s1 { top: 12%; left: 18%; font-size: 1.1em; }
+  .ga-snow.s2 { top: 22%; left: 70%; font-size: 0.9em; }
+  .ga-snow.s3 { top: 38%; left: 30%; font-size: 0.8em; }
+  .ga-steam { position:absolute; opacity:0.6; }
+  .ga-steam.t1 { top: 16%; left: 22%; font-size: 1.4em; }
+  .ga-steam.t2 { top: 26%; left: 64%; font-size: 1.1em; }
+  .ga-steam.t3 { top: 14%; left: 50%; font-size: 1em; }
+  .ga-label {
+    position:absolute; top:8px; left:10px; font-size: 0.7em; color: #2a3a4a;
+    background: rgba(255,255,255,0.85); padding: 3px 8px; border-radius: 4px; font-weight: 600;
+  }
+  .ga-toast {
+    position:absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.78); color:#fff; padding: 5px 11px; border-radius: 14px;
+    font-size: 0.65em; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+
+  /* HUD sidebar */
+  .hud2 {
+    width: 110px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.95);
+    border-left: 1px solid rgba(0,0,0,0.1);
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.62em;
+  }
+  .hud2 .hud-title { font-size: 0.95em; color:#2a3a4a; font-weight: 700; text-align:center; padding-bottom: 2px; border-bottom: 1px solid rgba(0,0,0,0.06); }
+
+  /* Vertical temperature bar */
+  .temp-bar-wrap { display: flex; gap: 6px; align-items: stretch; height: 200px; padding: 0 2px; position:relative; }
+  .temp-bar {
+    width: 22px;
+    position: relative;
+    border-radius: 5px;
+    background: linear-gradient(180deg,
+      #c0392b 0%, #c0392b 22%,
+      #2ecc71 24%, #2ecc71 56%,
+      #4a90e2 58%, #4a90e2 100%);
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+  .temp-marker {
+    position: absolute;
+    left: -8px;
+    width: 38px;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 10px solid #1a1a1a;
+    transform: translateY(-50%);
+  }
+  .temp-marker.cold { top: 68%; }
+  .temp-marker.hot { top: 30%; }
+  .temp-scale {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 0.85em;
+    color:#5a6c7d;
+    line-height: 1;
+  }
+  .temp-scale span { white-space: nowrap; }
+  .temp-readout {
+    text-align: center;
+    padding: 4px 0;
+    font-size: 1.05em;
+    font-weight: 700;
+  }
+  .temp-readout.good { color: #1a7a3a; }
+  .temp-readout.cold { color: #1c4e8c; }
+  .temp-readout.hot { color: #a02717; }
+  .temp-readout small { display:block; font-size: 0.75em; font-weight: 500; color:#5a6c7d; }
+
+  /* Auxiliary indicators */
+  .aux {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+  }
+  .aux-row {
+    display: flex; align-items: center; gap: 4px;
+    background: #f5f8fb; border-radius: 4px; padding: 3px 5px;
+    font-size: 0.95em;
+  }
+  .aux-row .ic { font-size: 1.1em; }
+  .aux-row .lbl { flex:1; color:#3a4a5a; }
+  .aux-row .val { font-weight: 600; color:#2a3a4a; }
+  .aux-row .bar2 { width: 28px; height: 4px; background:#e1e6eb; border-radius: 2px; overflow: hidden; }
+  .aux-row .bar2 .fill { height: 100%; }
+
+  /* Footer change log */
+  .change-log { font-size: 0.92em; color:#5a6c7d; padding: 4px 4px 0; border-top: 1px solid rgba(0,0,0,0.06); line-height: 1.35; }
+</style>
+
+<div class="split" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0;">
+
+  <!-- LEFT: 추운 환경 -->
+  <div>
+    <div style="text-align:center; font-weight:600; margin-bottom:6px; color:#1c4e8c;">❄️ 1국 야외 — 핀란드 시내 (-15℃)</div>
+    <div class="frame2 cold">
+      <div class="game-area">
+        <div class="ga-label">5초 경과</div>
+        <div class="ga-snow s1">❄</div>
+        <div class="ga-snow s2">❄</div>
+        <div class="ga-snow s3">❄</div>
+        <div class="ga-ground"></div>
+        <div class="ga-char">🧒</div>
+        <div class="ga-toast">🩸 혈관 수축! 체온 방어 시작</div>
+      </div>
+      <div class="hud2">
+        <div class="hud-title">내 몸 상태</div>
+        <div class="temp-bar-wrap">
+          <div class="temp-bar">
+            <div class="temp-marker cold"></div>
+          </div>
+          <div class="temp-scale">
+            <span>40 —</span>
+            <span>38 —</span>
+            <span>37.5</span>
+            <span>36.5</span>
+            <span>35.5</span>
+            <span>35 —</span>
+            <span>33 —</span>
+          </div>
+        </div>
+        <div class="temp-readout cold">
+          35.8℃
+          <small>저체온 진입!</small>
+        </div>
+        <div class="aux">
+          <div class="aux-row"><span class="ic">🩸</span><span class="lbl">혈관</span><span class="val">▼ 수축</span></div>
+          <div class="aux-row"><span class="ic">💧</span><span class="lbl">땀</span><span class="bar2"><span class="fill" style="width:0%;background:#3498db;"></span></span></div>
+          <div class="aux-row"><span class="ic">⚗️</span><span class="lbl">티록신</span><span class="bar2"><span class="fill" style="width:35%;background:#9b59b6;"></span></span></div>
+        </div>
+        <div class="change-log">방금: 떨림 발생<br>다음: 티록신 효과 (느림)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: 더운 환경 -->
+  <div>
+    <div style="text-align:center; font-weight:600; margin-bottom:6px; color:#a02717;">♨️ 1국 실내 — 핀란드 사우나 (+85℃)</div>
+    <div class="frame2 hot">
+      <div class="game-area">
+        <div class="ga-label">7초 경과</div>
+        <div class="ga-steam t1">💨</div>
+        <div class="ga-steam t2">💨</div>
+        <div class="ga-steam t3">💨</div>
+        <div class="ga-ground"></div>
+        <div class="ga-char">🥵</div>
+        <div class="ga-toast">💧 땀 분비 시작! 기화열로 발산</div>
+      </div>
+      <div class="hud2">
+        <div class="hud-title">내 몸 상태</div>
+        <div class="temp-bar-wrap">
+          <div class="temp-bar">
+            <div class="temp-marker hot"></div>
+          </div>
+          <div class="temp-scale">
+            <span>40 —</span>
+            <span>38 —</span>
+            <span>37.5</span>
+            <span>36.5</span>
+            <span>35.5</span>
+            <span>35 —</span>
+            <span>33 —</span>
+          </div>
+        </div>
+        <div class="temp-readout hot">
+          37.8℃
+          <small>고체온 진입!</small>
+        </div>
+        <div class="aux">
+          <div class="aux-row"><span class="ic">🩸</span><span class="lbl">혈관</span><span class="val">▲ 확장</span></div>
+          <div class="aux-row"><span class="ic">💧</span><span class="lbl">땀</span><span class="bar2"><span class="fill" style="width:70%;background:#3498db;"></span></span></div>
+          <div class="aux-row"><span class="ic">⚗️</span><span class="lbl">티록신</span><span class="bar2"><span class="fill" style="width:15%;background:#9b59b6;"></span></span></div>
+        </div>
+        <div class="change-log">방금: 땀샘 활성<br>다음: 티록신 ↓ (느림)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:18px;">
+  <h3>변경 요점</h3>
+  <ul style="font-size:0.88em; line-height:1.6;">
+    <li><strong>상단 미니 HUD → 우측 사이드 HUD</strong> (폭 ~110px ≈ 8.6%, 게임 영역 ~91%)로 변경. 막대를 시각적으로 부각</li>
+    <li><strong>체온 막대</strong>: 색상 영역(🔵 저체온 / 🟢 적정 / 🔴 고체온) + 눈금(33·35·35.5·36.5·37.5·38·40) + 슬라이더(◀) + 수치 readout</li>
+    <li><strong>적정 녹색대</strong>: 35.5 ~ 37.5℃. 그 밖은 저체온/고체온 → 경고 토스트 + 자동 회복 유도 (Q7 C 메커니즘)</li>
+    <li><strong>보조 인디케이터</strong>: 혈관(수축↔확장), 땀(0~100% 게이지), 티록신(0~100% 게이지) — "체온이 왜 그쪽으로 움직이는가" 단서 제공</li>
+    <li><strong>변화 로그</strong>: 막대 아래 "방금/다음" 두 줄로 즉시 반응과 느린 반응(티록신) 시간차 강조</li>
+    <li><strong>토스트</strong>: 변화 순간만 상단 중앙에 짧게 표시 (기존 유지)</li>
+  </ul>
+</div>
+
+<p class="subtitle">이 방향으로 확정해도 될까요? 아니면 폭·색상·라벨·배치를 더 조정할까요? (구현 시 admin 모드에서 실시간 조정도 가능합니다)</p>

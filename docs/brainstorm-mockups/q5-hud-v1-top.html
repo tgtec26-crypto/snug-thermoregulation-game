@@ -1,0 +1,219 @@
+<h2>Q5. 체온 조절 학습을 게임 안에서 어떻게 시각화할까요?</h2>
+<p class="subtitle">학생이 "지금 내 몸에서 어떤 항상성 반응이 일어났는가"를 인지하게 만드는 핵심 장치입니다. 4가지 옵션의 미니 mockup을 비교해 보세요.</p>
+
+<style>
+  .game-frame {
+    width: 100%;
+    aspect-ratio: 16/10;
+    background: linear-gradient(180deg, #b6dcff 0%, #e8f4ff 60%, #d4e8ff 100%);
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+  .gf-ground { position:absolute; bottom:0; left:0; right:0; height:30%; background:#e8eef4; border-top: 2px dashed #a8b8c8; }
+  .gf-char { position:absolute; left:42%; bottom:30%; width:14%; aspect-ratio:1/2; background:#ffd9b3; border-radius: 12px 12px 4px 4px; display:flex; align-items:flex-end; justify-content:center; font-size:1.6em; }
+  .gf-char::before { content:'🧒'; font-size: 2.2em; position:absolute; top:-8%; }
+  .gf-snowflake { position:absolute; color:#fff; opacity:0.8; }
+  .gf-snowflake.s1 { top: 12%; left: 18%; font-size: 1em; }
+  .gf-snowflake.s2 { top: 22%; left: 70%; font-size: 0.8em; }
+  .gf-snowflake.s3 { top: 38%; left: 30%; font-size: 0.7em; }
+  .gf-label { position:absolute; top:6px; left:8px; font-size: 0.65em; color: #5a6c7d; background: rgba(255,255,255,0.7); padding: 2px 6px; border-radius: 4px; }
+
+  /* Option A — 항상 보이는 사이드 HUD */
+  .hud-side {
+    position:absolute;
+    right: 6px;
+    top: 6px;
+    bottom: 6px;
+    width: 22%;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 6px;
+    padding: 6px 4px;
+    display:flex;
+    flex-direction:column;
+    gap: 4px;
+    font-size: 0.55em;
+  }
+  .hud-row { display:flex; align-items:center; gap:3px; padding: 2px 4px; background:#f5f8fb; border-radius: 4px; }
+  .hud-row .ic { font-size: 1.4em; }
+  .hud-row .lbl { color:#5a6c7d; flex:1; }
+  .hud-row .bar { width: 30px; height: 4px; background:#e1e6eb; border-radius:2px; overflow:hidden; }
+  .hud-row .fill { height:100%; background:linear-gradient(90deg, #4a90e2, #357abd); }
+  .hud-row.cold .fill { background:linear-gradient(90deg, #2c5aa0, #1e3d6f); width: 35%; }
+  .hud-row.vessel .fill { background:#c0392b; width: 25%; }
+  .hud-row.sweat .fill { background:#3498db; width: 8%; }
+  .hud-row.thyroxine .fill { background:#9b59b6; width: 50%; }
+
+  /* Option B — 토글 X-ray 모드 */
+  .xray-toggle {
+    position:absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.6em;
+    color:#3a4a5a;
+  }
+  .xray-overlay {
+    position:absolute;
+    left: 38%;
+    bottom: 28%;
+    width: 22%;
+    aspect-ratio: 1/1.5;
+    background: radial-gradient(ellipse at center, rgba(180,220,255,0.5), rgba(120,180,240,0.2));
+    border: 1px dashed #5a8cc4;
+    border-radius: 50% 50% 30% 30%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap: 3px;
+    font-size: 0.55em;
+    color: #1e3d6f;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .xray-overlay strong { font-size: 1.1em; color: #c0392b; }
+
+  /* Option C — 이벤트 텍스트 알림 */
+  .toast {
+    position:absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.78);
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 14px;
+    font-size: 0.62em;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .toast-2 {
+    position:absolute;
+    top: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(192,57,43,0.85);
+    color: #fff;
+    padding: 4px 9px;
+    border-radius: 12px;
+    font-size: 0.58em;
+    opacity: 0.85;
+  }
+
+  /* Option D — HUD + 알림 하이브리드 */
+  .hud-mini {
+    position:absolute;
+    right: 6px;
+    top: 6px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 6px;
+    padding: 4px 6px;
+    display:flex;
+    gap: 6px;
+    font-size: 0.55em;
+    align-items:center;
+  }
+  .hud-mini .chip { display:flex; align-items:center; gap:2px; }
+  .hud-mini .chip .num { color:#3a4a5a; font-weight:600; }
+</style>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>사이드 HUD (항상 표시)</h3>
+      <div class="game-frame" style="margin: 8px 0;">
+        <div class="gf-label">핀란드 시내 -15℃</div>
+        <div class="gf-snowflake s1">❄</div>
+        <div class="gf-snowflake s2">❄</div>
+        <div class="gf-snowflake s3">❄</div>
+        <div class="gf-ground"></div>
+        <div class="gf-char"></div>
+        <div class="hud-side">
+          <div style="font-size:0.95em; color:#3a4a5a; padding:0 4px; font-weight:600;">내 몸 상태</div>
+          <div class="hud-row cold"><span class="ic">🌡️</span><span class="lbl">체온</span><span class="bar"><span class="fill"></span></span></div>
+          <div class="hud-row vessel"><span class="ic">🩸</span><span class="lbl">혈관</span><span class="bar"><span class="fill"></span></span></div>
+          <div class="hud-row sweat"><span class="ic">💧</span><span class="lbl">땀</span><span class="bar"><span class="fill"></span></span></div>
+          <div class="hud-row thyroxine"><span class="ic">⚗️</span><span class="lbl">티록신</span><span class="bar"><span class="fill"></span></span></div>
+          <div style="font-size:0.85em; color:#5a6c7d; padding:0 4px; margin-top:auto;">반응: 혈관 수축 ↑</div>
+        </div>
+      </div>
+      <p style="font-size:0.85em; color:#5a6c7d;"><strong>장점</strong> 4지표 항상 보임 → 변화 인지 강함. 학습 단서 누락 없음.<br><strong>단점</strong> 화면 22% 가량 차지. 정보 밀도 ↑</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>"내 몸 보기" 토글 모드 (X-ray)</h3>
+      <div class="game-frame" style="margin: 8px 0;">
+        <div class="gf-label">B키: 내 몸 보기 (활성화 됨)</div>
+        <div class="gf-snowflake s1">❄</div>
+        <div class="gf-snowflake s2">❄</div>
+        <div class="gf-snowflake s3">❄</div>
+        <div class="gf-ground"></div>
+        <div class="gf-char"></div>
+        <div class="xray-overlay">
+          <strong>🩸 혈관 수축</strong>
+          <span>💪 근육 떨림</span>
+          <span>⚗️ 티록신 ↑ (느림)</span>
+        </div>
+        <div class="xray-toggle">🔬 내 몸 보기 ON</div>
+      </div>
+      <p style="font-size:0.85em; color:#5a6c7d;"><strong>장점</strong> 평소엔 깔끔한 RPG 화면. 토글 시 집중 학습.<br><strong>단점</strong> 학생이 토글을 안 누르면 단서 놓침</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>이벤트 텍스트 알림만</h3>
+      <div class="game-frame" style="margin: 8px 0;">
+        <div class="gf-label">핀란드 시내 -15℃</div>
+        <div class="gf-snowflake s1">❄</div>
+        <div class="gf-snowflake s2">❄</div>
+        <div class="gf-snowflake s3">❄</div>
+        <div class="gf-ground"></div>
+        <div class="gf-char"></div>
+        <div class="toast">🩸 혈관 수축! 표면 열 손실 ↓</div>
+        <div class="toast-2">💪 근육 떨림으로 열 생산</div>
+      </div>
+      <p style="font-size:0.85em; color:#5a6c7d;"><strong>장점</strong> 가벼움. 변화 순간을 명시적 문장으로 강조.<br><strong>단점</strong> 알림 사라지면 끝. 지속적 컨텍스트 없음</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>HUD + 알림 하이브리드 <span style="color:#2ecc71; font-size:0.75em;">(Claude 추천)</span></h3>
+      <div class="game-frame" style="margin: 8px 0;">
+        <div class="gf-label">핀란드 시내 -15℃</div>
+        <div class="gf-snowflake s1">❄</div>
+        <div class="gf-snowflake s2">❄</div>
+        <div class="gf-snowflake s3">❄</div>
+        <div class="gf-ground"></div>
+        <div class="gf-char"></div>
+        <div class="hud-mini">
+          <div class="chip">🌡️<span class="num">35.8℃</span></div>
+          <div class="chip">🩸<span class="num">▼</span></div>
+          <div class="chip">💧<span class="num">0</span></div>
+          <div class="chip">⚗️<span class="num">↑</span></div>
+        </div>
+        <div class="toast">🩸 혈관 수축! 체온 방어 시작</div>
+      </div>
+      <p style="font-size:0.85em; color:#5a6c7d;"><strong>장점</strong> 작은 상단 HUD (4지표 한눈에) + 변화 순간엔 알림으로 강조. 둘의 장점 결합.<br><strong>단점</strong> 구현 부담 약간 ↑ (그래도 A와 큰 차이 없음)</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px;">💡 mockup은 1280×800 크롬북 비율로 그렸습니다. 캐릭터·배경은 아직 임시 도형입니다 (Q8에서 별도 결정).</p>
