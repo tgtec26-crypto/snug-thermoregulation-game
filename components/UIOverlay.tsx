@@ -6,6 +6,7 @@ import { Toast } from '@/components/overlays/Toast';
 import { TitleNicknameModal } from '@/components/overlays/TitleNicknameModal';
 import { ClassroomChoice } from '@/components/overlays/ClassroomChoice';
 import { RPSModal } from '@/components/overlays/RPSModal';
+import { QuizModal } from '@/components/overlays/QuizModal';
 import type { Phase } from '@/game/types';
 
 const HUD_HIDDEN_PHASES = new Set<Phase>([
@@ -26,7 +27,8 @@ export function UIOverlay() {
       <TitleNicknameModal />
       <ClassroomChoice />
       <RPSModal />
-      {/* QuizModal, MinigameModal, EndingCard는 후속 task에서 */}
+      <QuizModal />
+      {/* MinigameModal, EndingCard는 후속 task에서 */}
     </>
   );
 }
