@@ -1,9 +1,29 @@
 {
-  "scene": "classroom",
-  "startNode": "entry",
   "nodes": [
-    { "id": "entry",     "x": 640, "y": 700, "type": "walk",    "label": "교실 입구" },
-    { "id": "choose",    "x": 640, "y": 400, "type": "trigger", "label": "학급회의 위치", "action": "classroom_choose_cold" },
-    { "id": "depart",    "x": 1100, "y": 700, "type": "exit",   "label": "교실 출구 → 공항", "action": "airport_start" }
-  ]
+    {
+      "x": 640,
+      "type": "walk",
+      "y": 700,
+      "label": "교실 입구",
+      "id": "entry"
+    },
+    {
+      "type": "trigger",
+      "x": 640,
+      "action": "classroom_choose_cold",
+      "id": "choose",
+      "y": 400,
+      "label": "학급회의"
+    },
+    {
+      "type": "exit",
+      "x": 1100,
+      "action": "airport_start",
+      "id": "depart",
+      "y": 700,
+      "label": "교실 출구"
+    }
+  ],
+  "scene": "classroom",
+  "startNode": "entry"
 }
