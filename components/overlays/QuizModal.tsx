@@ -28,7 +28,8 @@ export function QuizModal() {
         setOpen(true);
         setFirstAttemptForThisAirport(true);
       } else {
-        // 풀이 다 떨어졌으면 통과 처리
+        // 풀이 다 떨어졌으면 통과 처리 (drama 보존: 사유 토스트 명시)
+        showToast('문제 은행이 다 떨어졌어요. 통과!');
         advance();
       }
     }
