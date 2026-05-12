@@ -35,6 +35,9 @@ export interface GameState {
   // 위치 (저장/복원)
   characterPos: { x: number; y: number };
 
+  // 토스트 (UI 알림)
+  currentToast: string;
+
   // 액션
   setPhase: (p: Phase) => void;
   setNickname: (n: string) => void;
@@ -49,6 +52,7 @@ export interface GameState {
   recordTick: () => void;
   recordQuizAttempt: (questionId: string, wasFirstAttempt: boolean) => void;
   setCharacterPos: (x: number, y: number) => void;
+  showToast: (message: string) => void;
   reset: () => void;
 }
 
@@ -56,7 +60,7 @@ const initialState: Omit<GameState,
   | 'setPhase' | 'setNickname' | 'chooseCold' | 'chooseHot' | 'setActualCountries'
   | 'completeCountry' | 'adjustTemp' | 'setVesselState' | 'setSweatLevel'
   | 'setThyroxineLevel' | 'recordTick' | 'recordQuizAttempt' | 'setCharacterPos'
-  | 'reset'
+  | 'showToast' | 'reset'
 > = {
   nickname: '',
   phase: 'title',
@@ -75,6 +79,7 @@ const initialState: Omit<GameState,
   airportQuizFirstCorrect: 0,
   airportQuizTotalAttempts: 0,
   characterPos: { x: 640, y: 700 },
+  currentToast: '',
 };
 
 export const useGameStore = create<GameState>()(
@@ -125,6 +130,16 @@ export const useGameStore = create<GameState>()(
 
       setCharacterPos: (x, y) => set({ characterPos: { x, y } }),
 
+      showToast: (currentToast) => {
+        set({ currentToast });
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            const cur = useGameStore.getState().currentToast;
+            if (cur === currentToast) set({ currentToast: '' });
+          }
+        }, 2500);
+      },
+
       reset: () => set(initialState),
     }),
     {
@@ -147,6 +162,7 @@ export const useGameStore = create<GameState>()(
           setActualCountries: _5, completeCountry: _6, adjustTemp: _7,
           setVesselState: _8, setSweatLevel: _9, setThyroxineLevel: _10,
           recordTick: _11, recordQuizAttempt: _12, setCharacterPos: _13, reset: _14,
+          showToast: _15,
           ...persistable } = state;
         return persistable;
       },
