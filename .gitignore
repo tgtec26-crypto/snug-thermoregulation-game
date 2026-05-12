@@ -38,3 +38,10 @@ pnpm-debug.log*
 
 # claude session state (local)
 .claude/
+
+# next.js (create-next-app 추가본)
+yarn-debug.log*
+yarn-error.log*
+
+# vercel
+.vercel
