@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from './config';
 import { BootScene } from './scenes/BootScene';
 import { TitleScene } from './scenes/TitleScene';
 import { ClassroomScene } from './scenes/ClassroomScene';
+import { KoreaBusScene } from './scenes/KoreaBusScene';
 import { AirportScene } from './scenes/AirportScene';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { CountryScene } from './scenes/CountryScene';
@@ -17,7 +18,7 @@ export function makePhaserConfig(parent: HTMLElement): Phaser.Types.Core.GameCon
     backgroundColor: '#000',
     scene: [
       BootScene, TitleScene, ClassroomScene,
-      AirportScene, WorldMapScene, CountryScene, EndingScene,
+      KoreaBusScene, AirportScene, WorldMapScene, CountryScene, EndingScene,
     ],
     pixelArt: true,
     scale: {

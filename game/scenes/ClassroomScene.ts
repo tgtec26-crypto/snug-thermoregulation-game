@@ -24,8 +24,8 @@ export class ClassroomScene extends BaseGameScene {
     if (node.id === 'choose' && phase === 'classroom_intro') {
       setPhase('classroom_choose_cold');
     } else if (node.id === 'depart' && phase === 'classroom_depart') {
-      setPhase('airport_start');
-      this.scene.start('airport', { airportKey: 'airport_start' });
+      setPhase('korea_bus_to_airport');
+      this.scene.start('korea_bus', { direction: 'to_airport' });
     }
   }
 }

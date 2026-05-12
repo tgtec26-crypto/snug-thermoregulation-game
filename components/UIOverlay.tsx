@@ -10,6 +10,7 @@ import { QuizModal } from '@/components/overlays/QuizModal';
 import { MinigameModal } from '@/components/overlays/MinigameModal';
 import { TempTickRunner } from '@/components/overlays/TempTickRunner';
 import { EndingCard } from '@/components/overlays/EndingCard';
+import { NodeLabelOverlay } from '@/components/overlays/NodeLabelOverlay';
 import type { Phase } from '@/game/types';
 
 const HUD_HIDDEN_PHASES = new Set<Phase>([
@@ -34,6 +35,7 @@ export function UIOverlay() {
       <TempTickRunner />
       <MinigameModal />
       <EndingCard />
+      <NodeLabelOverlay />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { BaseGameScene } from './BaseGameScene';
 import type { NodeConfig, Country } from '@/game/types';
 import { useGameStore } from '@/store/gameStore';
+import { getCountryById } from '@/game/data/countries';
 
 interface CountryInit {
   country: Country;
@@ -25,9 +26,12 @@ export class CountryScene extends BaseGameScene {
     this.country = data.country;
     this.slot = data.slot;
     this.area = data.area ?? 'outdoor';
-    const mutable = this.init_ as { sceneKey: string; backgroundKey: string; nodesUrl: string };
+    const countryConfig = getCountryById(data.country);
+    const playerKey = countryConfig?.group === 'hot' ? 'player_hot' : 'player_cold';
+    const mutable = this.init_ as { sceneKey: string; backgroundKey: string; nodesUrl: string; playerKey: string };
     mutable.backgroundKey = `bg_country_${this.country}_${this.area}`;
     mutable.nodesUrl = `/data/nodes-country_${this.country}_${this.area}.json`;
+    mutable.playerKey = playerKey;
   }
 
   protected onNodeArrive(node: NodeConfig) {

@@ -5,33 +5,47 @@ export interface AssetEntry {
   frameConfig?: { frameWidth: number; frameHeight: number };
 }
 
-// 모든 자산은 사용자가 도트로 직접 제작 예정. 파일이 없으면 BootScene이
-// placeholder 색사각형을 generateTexture로 대체.
 export const BACKGROUNDS: AssetEntry[] = [
-  { key: 'bg_classroom',                 path: '/assets/backgrounds/classroom.png',                 type: 'image' },
-  { key: 'bg_airport_start',             path: '/assets/backgrounds/airport_start.png',             type: 'image' },
-  { key: 'bg_airport_finland',           path: '/assets/backgrounds/airport_finland.png',           type: 'image' },
-  { key: 'bg_airport_canada',            path: '/assets/backgrounds/airport_canada.png',            type: 'image' },
-  { key: 'bg_airport_dubai',             path: '/assets/backgrounds/airport_dubai.png',             type: 'image' },
-  { key: 'bg_airport_egypt',             path: '/assets/backgrounds/airport_egypt.png',             type: 'image' },
-  { key: 'bg_worldmap',                  path: '/assets/backgrounds/worldmap.png',                  type: 'image' },
-  { key: 'bg_country_finland_outdoor',   path: '/assets/backgrounds/country_finland_outdoor.png',   type: 'image' },
-  { key: 'bg_country_finland_indoor',    path: '/assets/backgrounds/country_finland_indoor.png',    type: 'image' },
-  { key: 'bg_country_canada_outdoor',    path: '/assets/backgrounds/country_canada_outdoor.png',    type: 'image' },
-  { key: 'bg_country_canada_indoor',     path: '/assets/backgrounds/country_canada_indoor.png',     type: 'image' },
-  { key: 'bg_country_dubai_outdoor',     path: '/assets/backgrounds/country_dubai_outdoor.png',     type: 'image' },
-  { key: 'bg_country_dubai_indoor',      path: '/assets/backgrounds/country_dubai_indoor.png',      type: 'image' },
-  { key: 'bg_country_egypt_outdoor',     path: '/assets/backgrounds/country_egypt_outdoor.png',     type: 'image' },
-  { key: 'bg_country_egypt_indoor',      path: '/assets/backgrounds/country_egypt_indoor.png',      type: 'image' },
-  { key: 'bg_ending',                    path: '/assets/backgrounds/ending.png',                    type: 'image' },
+  { key: 'bg_classroom',                 path: '/assets/backgrounds/classroom_start.png',     type: 'image' },
+  // 모든 공항 내부는 airport.png 공용
+  { key: 'bg_airport_start',             path: '/assets/backgrounds/airport.png',              type: 'image' },
+  { key: 'bg_airport_finland',           path: '/assets/backgrounds/airport.png',              type: 'image' },
+  { key: 'bg_airport_canada',            path: '/assets/backgrounds/airport.png',              type: 'image' },
+  { key: 'bg_airport_dubai',             path: '/assets/backgrounds/airport.png',              type: 'image' },
+  { key: 'bg_airport_egypt',             path: '/assets/backgrounds/airport.png',              type: 'image' },
+  { key: 'bg_worldmap',                  path: '/assets/backgrounds/world_map.png',            type: 'image' },
+  // 한국 버스 씬 — 학교↔공항 지도. to_airport / to_school 방향 모두 이 배경 재사용
+  { key: 'bg_korea_map',                 path: '/assets/backgrounds/school_to_airport.png',    type: 'image' },
+  { key: 'bg_country_finland_outdoor',   path: '/assets/backgrounds/finland_lapland.png',      type: 'image' },
+  { key: 'bg_country_finland_indoor',    path: '/assets/backgrounds/finland_sauna.png',        type: 'image' },
+  { key: 'bg_country_canada_outdoor',    path: '/assets/backgrounds/canada_yellowknife.png',   type: 'image' },
+  { key: 'bg_country_canada_indoor',     path: '/assets/backgrounds/canada_hotspring.png',     type: 'image' },
+  { key: 'bg_country_dubai_outdoor',     path: '/assets/backgrounds/dubai_desert.png',         type: 'image' },
+  { key: 'bg_country_dubai_indoor',      path: '/assets/backgrounds/dubai_ski.png',            type: 'image' },
+  { key: 'bg_country_egypt_outdoor',     path: '/assets/backgrounds/egypt_pyramid.png',        type: 'image' },
+  { key: 'bg_country_egypt_indoor',      path: '/assets/backgrounds/egypt_catacombs.png',      type: 'image' },
+  { key: 'bg_ending',                    path: '/assets/backgrounds/ending.png',               type: 'image' },
 ];
 
+// 국가 내부 이동 맵 (각 나라 지도 배경 — CountryMapScene 구현 시 사용)
+export const COUNTRY_MAPS: AssetEntry[] = [
+  { key: 'map_finland', path: '/assets/backgrounds/Finland_map.png', type: 'image' },
+  { key: 'map_canada',  path: '/assets/backgrounds/canada_map.png',  type: 'image' },
+  { key: 'map_dubai',   path: '/assets/backgrounds/dubai_map.png',   type: 'image' },
+  { key: 'map_egypt',   path: '/assets/backgrounds/egypt_map.png',   type: 'image' },
+];
+
+// 플레이어 복장 — 지역별 static 이미지 (한국/추운나라/더운나라)
 export const SPRITES: AssetEntry[] = [
-  { key: 'player_idle',       path: '/assets/sprites/player_idle.png',       type: 'image' },
-  { key: 'player_walk_down',  path: '/assets/sprites/player_walk_down.png',  type: 'spritesheet', frameConfig: { frameWidth: 110, frameHeight: 186 } },
-  { key: 'player_walk_left',  path: '/assets/sprites/player_walk_left.png',  type: 'spritesheet', frameConfig: { frameWidth: 110, frameHeight: 186 } },
-  { key: 'player_walk_right', path: '/assets/sprites/player_walk_right.png', type: 'spritesheet', frameConfig: { frameWidth: 110, frameHeight: 186 } },
-  { key: 'player_walk_up',    path: '/assets/sprites/player_walk_up.png',    type: 'spritesheet', frameConfig: { frameWidth: 110, frameHeight: 186 } },
+  { key: 'player_korea', path: '/assets/sprites/player_korea.png',        type: 'image' },
+  { key: 'player_cold',  path: '/assets/sprites/player_cold_country.png', type: 'image' },
+  { key: 'player_hot',   path: '/assets/sprites/player_hot_country.png',  type: 'image' },
+];
+
+// 이동 수단 아이콘
+export const MOVE_ASSETS: AssetEntry[] = [
+  { key: 'move_bus',      path: '/assets/move/bus.png',      type: 'image' },
+  { key: 'move_airplane', path: '/assets/move/airplane.png', type: 'image' },
 ];
 
 // Placeholder 색상 (자산 없을 때 fallback)
@@ -43,6 +57,7 @@ export const PLACEHOLDER_BG_COLORS: Record<string, number> = {
   bg_airport_dubai:           0xf4d4a0,
   bg_airport_egypt:           0xf4dca0,
   bg_worldmap:                0xc0d4e8,
+  bg_korea_map:               0xe8f0e0,
   bg_country_finland_outdoor: 0xb6dcff,
   bg_country_finland_indoor:  0xf4c477,
   bg_country_canada_outdoor:  0xa0b8d4,

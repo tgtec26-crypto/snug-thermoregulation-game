@@ -1,11 +1,13 @@
 import * as Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, WALK_SPEED, HUD_WIDTH } from '@/game/config';
 import type { SceneNodes, NodeConfig } from '@/game/types';
+import { useGameStore } from '@/store/gameStore';
 
 export interface BaseSceneInit {
   sceneKey: string;             // ex: 'classroom', 'country_finland_outdoor'
   backgroundKey: string;        // ex: 'bg_classroom'
   nodesUrl: string;             // ex: '/data/nodes-classroom.json'
+  playerKey?: string;           // ex: 'player_korea' | 'player_cold' | 'player_hot'
 }
 
 /**
@@ -20,6 +22,7 @@ export abstract class BaseGameScene extends Phaser.Scene {
   protected player!: Phaser.GameObjects.Image;
   protected isMoving = false;
   protected nodeGraphics: Phaser.GameObjects.Graphics | null = null;
+  private storeUnsub: (() => void) | null = null;
 
   constructor(public readonly init_: BaseSceneInit) {
     super({ key: init_.sceneKey });
@@ -51,15 +54,32 @@ export abstract class BaseGameScene extends Phaser.Scene {
       return;
     }
 
-    this.player = this.add.image(startNode.x, startNode.y, 'player_idle')
+    this.player = this.add.image(startNode.x, startNode.y, this.init_.playerKey ?? 'player_korea')
       .setOrigin(0.5, 1)   // 발 끝이 노드 위치
       .setDisplaySize(80, 135);  // 디스플레이 크기 (실제 sprite 110x186 보다 조금 작게)
 
     // 노드 클릭 가능 영역 그리기 (디버그 + admin 외부에서도 보임)
     this.drawNodeHandles();
 
+    // store에 노드 정보 발행 (React 오버레이용)
+    useGameStore.getState().setActiveNodes(this.nodesData);
+
+    // React 오버레이 클릭 → Phaser 이동 브릿지
+    this.storeUnsub = useGameStore.subscribe((state, prev) => {
+      if (state.pendingNodeClick && state.pendingNodeClick !== prev.pendingNodeClick) {
+        const node = this.findNode(state.pendingNodeClick);
+        if (node) this.moveToNode(node);
+        useGameStore.getState().clearNodeClick();
+      }
+    });
+
     // hook
     this.onSceneReady();
+  }
+
+  shutdown() {
+    this.storeUnsub?.();
+    useGameStore.getState().setActiveNodes(null);
   }
 
   /** 서브클래스가 추가 초기화할 때 오버라이드 */
@@ -79,19 +99,23 @@ export abstract class BaseGameScene extends Phaser.Scene {
 
     this.nodesData.nodes.forEach(n => {
       const radius = 22;
-      const color = n.type === 'trigger' ? 0xffd24a : n.type === 'exit' ? 0x88ddaa : 0xaaaaaa;
-      this.nodeGraphics!.fillStyle(color, 0.6);
-      this.nodeGraphics!.fillCircle(n.x, n.y, radius);
-      this.nodeGraphics!.lineStyle(2, 0xffffff, 0.9);
-      this.nodeGraphics!.strokeCircle(n.x, n.y, radius);
 
-      // 클릭 영역 (보이지 않는 Zone)
+      // labelSvg가 있는 노드는 React 오버레이로 렌더링 → Phaser 원 생략
+      if (!n.labelSvg) {
+        const color = n.type === 'trigger' ? 0xffd24a : n.type === 'exit' ? 0x88ddaa : 0xaaaaaa;
+        this.nodeGraphics!.fillStyle(color, 0.6);
+        this.nodeGraphics!.fillCircle(n.x, n.y, radius);
+        this.nodeGraphics!.lineStyle(2, 0xffffff, 0.9);
+        this.nodeGraphics!.strokeCircle(n.x, n.y, radius);
+      }
+
+      // 클릭 영역 (보이지 않는 Zone) — labelSvg 유무와 무관하게 항상 유지
       const zone = this.add.zone(n.x, n.y, radius * 2.4, radius * 2.4).setInteractive();
       zone.on('pointerdown', () => this.moveToNode(n));
     });
   }
 
-  /** L자(맨해튼) 경로로 이동 후 onNodeArrive 호출 */
+  /** 맨해튼(L자) 경로로 이동 후 onNodeArrive 호출 */
   protected moveToNode(node: NodeConfig) {
     if (this.isMoving) return;
     this.isMoving = true;
@@ -101,7 +125,7 @@ export abstract class BaseGameScene extends Phaser.Scene {
     const durX = (distX / WALK_SPEED) * 1000;
     const durY = (distY / WALK_SPEED) * 1000;
 
-    // 가로 먼저 → 세로 (L자 1)
+    // 가로 먼저 → 세로
     this.tweens.add({
       targets: this.player,
       x: node.x,

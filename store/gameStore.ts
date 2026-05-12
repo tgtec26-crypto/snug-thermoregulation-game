@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
-  Phase, Country, VesselState,
+  Phase, Country, VesselState, SceneNodes,
 } from '@/game/types';
 import { TEMP_INITIAL, TEMP_SAFE_MIN, TEMP_SAFE_MAX } from '@/game/config';
 
@@ -38,6 +38,10 @@ export interface GameState {
   // 토스트 (UI 알림)
   currentToast: string;
 
+  // 노드 오버레이 (Phaser → React 브릿지)
+  activeNodes: SceneNodes | null;
+  pendingNodeClick: string | null;
+
   // 액션
   setPhase: (p: Phase) => void;
   setNickname: (n: string) => void;
@@ -53,6 +57,9 @@ export interface GameState {
   recordQuizAttempt: (questionId: string, wasFirstAttempt: boolean) => void;
   setCharacterPos: (x: number, y: number) => void;
   showToast: (message: string) => void;
+  setActiveNodes: (nodes: SceneNodes | null) => void;
+  clickNode: (nodeId: string) => void;
+  clearNodeClick: () => void;
   reset: () => void;
 }
 
@@ -60,7 +67,7 @@ const initialState: Omit<GameState,
   | 'setPhase' | 'setNickname' | 'chooseCold' | 'chooseHot' | 'setActualCountries'
   | 'completeCountry' | 'adjustTemp' | 'setVesselState' | 'setSweatLevel'
   | 'setThyroxineLevel' | 'recordTick' | 'recordQuizAttempt' | 'setCharacterPos'
-  | 'showToast' | 'reset'
+  | 'showToast' | 'setActiveNodes' | 'clickNode' | 'clearNodeClick' | 'reset'
 > = {
   nickname: '',
   phase: 'title',
@@ -80,6 +87,8 @@ const initialState: Omit<GameState,
   airportQuizTotalAttempts: 0,
   characterPos: { x: 640, y: 700 },
   currentToast: '',
+  activeNodes: null,
+  pendingNodeClick: null,
 };
 
 export const useGameStore = create<GameState>()(
@@ -130,6 +139,10 @@ export const useGameStore = create<GameState>()(
 
       setCharacterPos: (x, y) => set({ characterPos: { x, y } }),
 
+      setActiveNodes: (activeNodes) => set({ activeNodes }),
+      clickNode: (pendingNodeClick) => set({ pendingNodeClick }),
+      clearNodeClick: () => set({ pendingNodeClick: null }),
+
       showToast: (currentToast) => {
         set({ currentToast });
         setTimeout(() => {
@@ -157,12 +170,13 @@ export const useGameStore = create<GameState>()(
             } satisfies Storage)
       ),
       partialize: (state) => {
-        // 함수 제외하고 상태값만 persist
+        // 함수·런타임 전용 상태 제외
         const { setPhase: _1, setNickname: _2, chooseCold: _3, chooseHot: _4,
           setActualCountries: _5, completeCountry: _6, adjustTemp: _7,
           setVesselState: _8, setSweatLevel: _9, setThyroxineLevel: _10,
           recordTick: _11, recordQuizAttempt: _12, setCharacterPos: _13, reset: _14,
-          showToast: _15,
+          showToast: _15, setActiveNodes: _16, clickNode: _17, clearNodeClick: _18,
+          activeNodes: _19, pendingNodeClick: _20,
           ...persistable } = state;
         return persistable;
       },
