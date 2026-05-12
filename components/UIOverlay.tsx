@@ -3,6 +3,9 @@
 import { useGameStore } from '@/store/gameStore';
 import { HUDBar } from '@/components/overlays/HUDBar';
 import { Toast } from '@/components/overlays/Toast';
+import { TitleNicknameModal } from '@/components/overlays/TitleNicknameModal';
+import { ClassroomChoice } from '@/components/overlays/ClassroomChoice';
+import { RPSModal } from '@/components/overlays/RPSModal';
 import type { Phase } from '@/game/types';
 
 const HUD_HIDDEN_PHASES = new Set<Phase>([
@@ -20,7 +23,10 @@ export function UIOverlay() {
     <>
       {showHud && <HUDBar />}
       <Toast />
-      {/* TitleNicknameModal·ClassroomChoice·RPSModal·QuizModal·MinigameModal·EndingCard 는 후속 task에서 추가 */}
+      <TitleNicknameModal />
+      <ClassroomChoice />
+      <RPSModal />
+      {/* QuizModal, MinigameModal, EndingCard는 후속 task에서 */}
     </>
   );
 }
