@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { MINIGAME_SUCCESS_DELTA } from '@/game/config';
 import type { Phase } from '@/game/types';
+import { ShiverRhythmGame } from './ShiverRhythmGame';
 
 const COUNTRY_PHASES = new Set<Phase>([
   'country_1_outdoor', 'country_1_indoor',
@@ -11,6 +12,8 @@ const COUNTRY_PHASES = new Set<Phase>([
 ]);
 
 type MinigameKind = 'shiver' | 'sweat';
+
+const SHIVER_MISS_DELTA = 0.1;  // 미스 1회당 체온 -0.1℃
 
 export function MinigameModal() {
   const phase = useGameStore(s => s.phase);
@@ -25,9 +28,11 @@ export function MinigameModal() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scoreRef = useRef(0);
   const kindRef = useRef<MinigameKind>('shiver');
+  const phaseRef = useRef<Phase>(phase);
 
   // phase 변화에 따라 미니게임 자동 시작 (phase 진입 시 한 번)
   useEffect(() => {
+    phaseRef.current = phase;
     if (!COUNTRY_PHASES.has(phase)) {
       setActive(false);
       return;
@@ -42,9 +47,42 @@ export function MinigameModal() {
     setActive(true);
   }, [phase]);
 
-  // 타이머
+  // 떨림 케이스 = 리듬게임 사용. 그 외(땀)는 기존 탭 카운터 유지.
+  const isShiverRhythm = active && kind === 'shiver';
+
+  // 다음 phase 결정 (둘 다 공용)
+  const advancePhase = useCallback(() => {
+    const p = phaseRef.current;
+    const nextPhase: Phase | null =
+      p === 'country_1_outdoor' || p === 'country_1_indoor' ? 'country_1_arrived' :
+      p === 'country_2_outdoor' || p === 'country_2_indoor' ? 'country_2_arrived' :
+      null;
+    if (nextPhase) setPhase(nextPhase);
+  }, [setPhase]);
+
+  // ─────────────── 리듬게임 콜백 ───────────────
+  const handleShiverSuccess = useCallback(() => {
+    adjustTemp(+MINIGAME_SUCCESS_DELTA);
+    showToast('🔥 떨림 성공! 체온 ↑');
+  }, [adjustTemp, showToast]);
+
+  const handleMiss = useCallback(() => {
+    adjustTemp(-SHIVER_MISS_DELTA);
+  }, [adjustTemp]);
+
+  const handleRhythmFinish = useCallback((result: { hits: number; misses: number; shiverPops: number }) => {
+    setActive(false);
+    if (result.shiverPops > 0) {
+      showToast(`💪 떨림 ${result.shiverPops}회 성공! 체온 회복`);
+    } else {
+      showToast('아쉽... 다음 단계로 갑니다');
+    }
+    setTimeout(() => advancePhase(), 1500);
+  }, [advancePhase, showToast]);
+
+  // ─────────────── 기존 탭 카운터 (땀 케이스) ───────────────
   useEffect(() => {
-    if (!active) return;
+    if (!active || isShiverRhythm) return;
     timerRef.current = setInterval(() => {
       setTimeLeft(t => {
         if (t <= 1) {
@@ -59,10 +97,10 @@ export function MinigameModal() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
+  }, [active, isShiverRhythm]);
 
   const tap = () => {
-    if (!active) return;
+    if (!active || isShiverRhythm) return;
     scoreRef.current += 1;
     setScore(scoreRef.current);
   };
@@ -71,25 +109,26 @@ export function MinigameModal() {
     setActive(false);
     const success = scoreRef.current >= 10;
     if (success) {
-      const isCooling = kindRef.current === 'sweat'; // 땀 닦기 = 더위 → 식힘
+      const isCooling = kindRef.current === 'sweat';
       adjustTemp(isCooling ? -MINIGAME_SUCCESS_DELTA : +MINIGAME_SUCCESS_DELTA);
       showToast(kindRef.current === 'shiver' ? '💪 떨림으로 열 발생! 체온 회복' : '💧 땀 발산! 체온 회복');
     } else {
       showToast('아쉽! 다음 단계로 갑니다');
     }
-
-    // 미니게임 종료 → 국가 맵으로 복귀 (country_<slot>_arrived로 phase 설정)
-    // CountryScene이 이를 감지해서 CountryMapScene을 현재 area 위치로 띄움
-    const nextPhase: Phase | null =
-      phase === 'country_1_outdoor' || phase === 'country_1_indoor' ? 'country_1_arrived' :
-      phase === 'country_2_outdoor' || phase === 'country_2_indoor' ? 'country_2_arrived' :
-      null;
-    if (nextPhase) {
-      setTimeout(() => setPhase(nextPhase), 1500);  // 토스트 보이는 시간 확보
-    }
+    setTimeout(() => advancePhase(), 1500);
   };
 
   if (!active) return null;
+
+  if (isShiverRhythm) {
+    return (
+      <ShiverRhythmGame
+        onFinish={handleRhythmFinish}
+        onShiverSuccess={handleShiverSuccess}
+        onMiss={handleMiss}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/40">
