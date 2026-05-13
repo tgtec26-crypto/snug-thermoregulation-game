@@ -99,10 +99,10 @@ export function GuidanceBanner() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          // 게시판 이미지의 상단 헤더(Departures · Terminal 3)·하단 푸터 영역을 비워두고
-          // 가운데 어두운 body 영역에 텍스트가 정렬되도록 비대칭 패딩 사용
-          paddingTop: `${boardH * 0.30}px`,
-          paddingBottom: `${boardH * 0.08}px`,
+          // 상단 오렌지 헤더(Departures · Terminal 3)와 하단 베벨만 비워두고
+          // 검은 body 영역 중앙에 텍스트가 오도록 패딩 조정
+          paddingTop: `${boardH * 0.18}px`,
+          paddingBottom: `${boardH * 0.07}px`,
           paddingLeft: `${48 * sx * SCALE}px`,
           paddingRight: `${48 * sx * SCALE}px`,
           textAlign: 'center',
