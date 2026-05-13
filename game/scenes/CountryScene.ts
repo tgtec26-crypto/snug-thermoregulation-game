@@ -39,9 +39,11 @@ export class CountryScene extends BaseGameScene {
     const store = useGameStore.getState();
 
     // 진입 시 phase 보정 (이미 country_map.onArrive가 설정했지만 안전망)
-    const targetPhase = this.minigamePhase();
-    if (store.phase !== targetPhase) {
-      store.setPhase(targetPhase);
+    // intro phase 도 정상 — TeacherIntro 종료 후 game phase 로 자동 전환됨
+    const gamePhase = this.minigamePhase();
+    const introPhase = `${gamePhase}_intro` as Phase;
+    if (store.phase !== gamePhase && store.phase !== introPhase) {
+      store.setPhase(introPhase);
     }
 
     // 방어적: 이전 instance의 phase subscriber 정리 (씬 재진입 시 closure leak 방지)

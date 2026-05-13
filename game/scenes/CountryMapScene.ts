@@ -187,10 +187,11 @@ export class CountryMapScene extends Phaser.Scene {
   private onArrive(dest: Position) {
     const store = useGameStore.getState();
     if (dest === 'outdoor') {
-      store.setPhase((this.slot === 1 ? 'country_1_outdoor' : 'country_2_outdoor') as Phase);
+      // 인트로 phase 먼저 → TeacherIntro 종료 시 country_<slot>_outdoor 로 자동 전환
+      store.setPhase((this.slot === 1 ? 'country_1_outdoor_intro' : 'country_2_outdoor_intro') as Phase);
       this.scene.start('country', { country: this.country, slot: this.slot, area: 'outdoor' });
     } else if (dest === 'indoor') {
-      store.setPhase((this.slot === 1 ? 'country_1_indoor' : 'country_2_indoor') as Phase);
+      store.setPhase((this.slot === 1 ? 'country_1_indoor_intro' : 'country_2_indoor_intro') as Phase);
       this.scene.start('country', { country: this.country, slot: this.slot, area: 'indoor' });
     } else {
       // 공항 복귀 → 해당 국가 공항 퀴즈

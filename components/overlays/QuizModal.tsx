@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { startAirportQuiz, evaluateAnswer } from '@/game/systems/quizSystem';
+import { loadQuizPool } from '@/game/data/quizPool';
 import type { QuizQuestion, Phase } from '@/game/types';
 
 const AIRPORT_QUIZ_PHASES = new Set<Phase>(['airport_start', 'airport_1', 'airport_2']);
@@ -18,9 +19,16 @@ export function QuizModal() {
   const [current, setCurrent] = useState<QuizQuestion | null>(null);
   const [showExplanation, setShowExplanation] = useState<{ correct: boolean; explanation: string } | null>(null);
   const [firstAttemptForThisAirport, setFirstAttemptForThisAirport] = useState(true);
+  const [poolReady, setPoolReady] = useState(false);
+
+  // admin에서 편집된 quiz-pool.json을 한 번 로드 (fetch 실패 시 빌트인 풀 그대로)
+  useEffect(() => {
+    loadQuizPool().finally(() => setPoolReady(true));
+  }, []);
 
   // phase가 airport_* 가 되면 modal 자동으로 띄움.
   useEffect(() => {
+    if (!poolReady) return;
     if (AIRPORT_QUIZ_PHASES.has(phase) && !open) {
       const q = startAirportQuiz(attemptedIds);
       if (q) {
@@ -34,7 +42,7 @@ export function QuizModal() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, poolReady]);
 
   if (!open || !current) return null;
 
@@ -75,39 +83,66 @@ export function QuizModal() {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/40">
-      <div className="bg-white rounded-xl p-6 shadow-lg w-[520px] flex flex-col gap-3">
-        <div className="flex justify-between text-xs text-slate-500">
-          <span>✈️ 탑승 게이트 퀴즈</span>
-          <span>정답을 맞춰야 비행기표가 발급돼요</span>
+    <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/50 backdrop-blur-[2px] px-6">
+      <div
+        className="bg-black/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl px-8 py-6 w-full max-w-[720px] flex flex-col gap-5"
+        style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-amber-300 font-bold text-[24px] tracking-wide">
+            ✈️ 탑승 게이트 퀴즈
+          </h2>
+          <span className="text-white/60 text-[13px]">정답을 맞춰야 비행기표가 발급돼요</span>
         </div>
-        <h2 className="text-lg font-bold text-slate-800">{current.question}</h2>
 
-        <div className="grid grid-cols-1 gap-2">
+        <p className="text-white text-[26px] font-bold leading-relaxed text-center whitespace-pre-wrap">
+          {current.question}
+        </p>
+
+        <div className="flex flex-col gap-2.5">
           {current.choices.map((c, idx) => {
             const disabled = !!showExplanation;
-            const isAnswer = showExplanation && idx === current.answerIndex;
+            const isCorrect = showExplanation && idx === current.answerIndex;
+            const cls = disabled
+              ? isCorrect
+                ? 'border-emerald-400/70 bg-emerald-400/20 text-emerald-100 shadow-[0_0_20px_-4px_rgba(52,211,153,0.5)]'
+                : 'border-white/10 bg-white/5 text-white/40'
+              : 'border-white/25 bg-white/10 text-white hover:bg-white/20 hover:border-white/50 hover:scale-[1.015] active:scale-[0.98]';
             return (
               <button
                 key={idx}
                 disabled={disabled}
                 onClick={() => choose(idx)}
-                className={`border rounded-lg px-3 py-2 text-left transition ${
-                  disabled
-                    ? isAnswer ? 'border-green-500 bg-green-50' : 'border-slate-200 bg-slate-50'
-                    : 'border-slate-300 hover:border-sky-500 text-slate-800'
-                }`}
+                className={`rounded-2xl px-5 py-3.5 text-left transition-all text-[20px] font-medium border flex items-center gap-3 ${cls}`}
               >
-                <span className="font-semibold mr-2">{idx + 1}.</span>
-                <span>{c}</span>
+                <span
+                  className={`font-bold text-[22px] shrink-0 w-6 text-center ${
+                    disabled
+                      ? isCorrect ? 'text-emerald-300' : 'text-white/30'
+                      : 'text-amber-300'
+                  }`}
+                >
+                  {idx + 1}
+                </span>
+                <span className="flex-1">{c}</span>
+                {isCorrect && <span className="text-emerald-300 text-[22px]">✓</span>}
               </button>
             );
           })}
         </div>
 
         {showExplanation && (
-          <div className={`mt-2 p-2 rounded text-sm ${showExplanation.correct ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-            {showExplanation.correct ? showExplanation.explanation : '다시 한 번 풀어볼까요? 다음 문제로 갈게요.'}
+          <div
+            className={`rounded-2xl px-5 py-3.5 text-[17px] font-medium border leading-relaxed ${
+              showExplanation.correct
+                ? 'border-emerald-400/50 bg-emerald-400/15 text-emerald-100'
+                : 'border-rose-400/50 bg-rose-400/15 text-rose-100'
+            }`}
+            style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+          >
+            {showExplanation.correct
+              ? showExplanation.explanation
+              : '😅 다시 한 번 풀어볼까요? 다음 문제로 갈게요.'}
           </div>
         )}
       </div>

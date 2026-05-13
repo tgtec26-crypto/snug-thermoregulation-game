@@ -15,7 +15,7 @@
       "x": 526,
       "y": 229,
       "type": "walk",
-      "label": "기자 피라미드",
+      "label": "기자 피라미드 단지",
       "labelSvg": "/assets/textbutton/egypt_pyramid_button.svg"
     },
     {
@@ -23,7 +23,7 @@
       "x": 317,
       "y": 616,
       "type": "walk",
-      "label": "알렉산드리아 카타콤",
+      "label": "카타콤",
       "labelSvg": "/assets/textbutton/egypt_catacombs_button.svg"
     }
   ]

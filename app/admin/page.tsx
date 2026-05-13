@@ -4,8 +4,16 @@ import { useEffect, useState, useRef } from 'react';
 import type {
   SceneNodes, WorldmapPaths, WorldmapRouteKey, KoreaBusPath,
   CountryMapPaths, CountryMapPathKey, CountryMapKey,
+  QuizQuestion,
 } from '@/game/types';
 import { bezierSvgPath } from '@/game/utils/bezier';
+import {
+  type TeacherLine,
+  type TeacherSize,
+  TEACHER_SIZES,
+  TEACHER_SIZE_LABEL,
+  normalizeTeacherData,
+} from '@/game/data/teacherLines';
 
 // ─── 경로 편집 ────────────────────────────────────────────────────────────────
 // 모든 단일 화면(classroom·airports·outdoor·indoor·ending)은 오버레이 기반 이벤트로 진행 →
@@ -86,17 +94,27 @@ export default function AdminPage() {
 
   // ── 선생님 멘트 편집 상태 ──
   // 키별 멘트 묶음 (예: { intro: [...], rps_cold_intro: [...] })
-  const [teacherData, setTeacherData]     = useState<Record<string, string[]>>({});
+  const [teacherData, setTeacherData]     = useState<Record<string, TeacherLine[]>>({});
   const [teacherSaved, setTeacherSaved]   = useState(false);
+
+  // ── 공항 퀴즈 편집 상태 ──
+  const [quizPool, setQuizPool]           = useState<QuizQuestion[] | null>(null);
+  const [quizSaved, setQuizSaved]         = useState(false);
 
   // 경로 데이터 로드
   useEffect(() => {
     fetch('/data/paths-worldmap.json').then(r => r.json()).then(setWorldmapPaths);
     fetch('/data/nodes-worldmap.json').then(r => r.json()).then(setWorldmapNodes);
     fetch('/data/paths-korea.json').then(r => r.json()).then(setKoreaPaths);
-    fetch('/data/teacher-intro.json').then(r => r.json()).then((d: Record<string, string[]>) => {
-      if (d && typeof d === 'object' && !Array.isArray(d)) setTeacherData(d);
-    });
+    fetch('/data/teacher-intro.json')
+      .then(r => r.json())
+      .then((d: unknown) => setTeacherData(normalizeTeacherData(d)));
+    fetch(`/data/quiz-pool.json?t=${Date.now()}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: unknown) => {
+        if (Array.isArray(d)) setQuizPool(d as QuizQuestion[]);
+      })
+      .catch(() => { /* ignore */ });
   }, []);
 
   // 국가 맵 데이터 로드 (국가 변경 시마다)
@@ -178,14 +196,20 @@ export default function AdminPage() {
   };
 
   // ── 선생님 멘트 편집 핸들러 ──
-  const updateTeacherLine = (key: string, i: number, val: string) => {
+  const updateTeacherText = (key: string, i: number, text: string) => {
     setTeacherData(prev => ({
       ...prev,
-      [key]: (prev[key] ?? []).map((l, j) => (j === i ? val : l)),
+      [key]: (prev[key] ?? []).map((l, j) => (j === i ? { ...l, text } : l)),
+    }));
+  };
+  const updateTeacherSize = (key: string, i: number, size: TeacherSize) => {
+    setTeacherData(prev => ({
+      ...prev,
+      [key]: (prev[key] ?? []).map((l, j) => (j === i ? { ...l, size } : l)),
     }));
   };
   const addTeacherLine = (key: string) =>
-    setTeacherData(prev => ({ ...prev, [key]: [...(prev[key] ?? []), ''] }));
+    setTeacherData(prev => ({ ...prev, [key]: [...(prev[key] ?? []), { text: '' }] }));
   const removeTeacherLine = (key: string, i: number) =>
     setTeacherData(prev => ({
       ...prev,
@@ -201,6 +225,31 @@ export default function AdminPage() {
       return { ...prev, [key]: next };
     });
   };
+  // ── 국가 맵 노드 라벨 편집 핸들러 ──
+  const updateCountryNodeLabel = (id: string, label: string) =>
+    setCountryNodes(prev => prev ? {
+      ...prev,
+      nodes: prev.nodes.map(n => n.id === id ? { ...n, label } : n),
+    } : null);
+
+  // ── 공항 퀴즈 편집 핸들러 ──
+  const updateQuizField = <K extends keyof QuizQuestion>(i: number, field: K, value: QuizQuestion[K]) =>
+    setQuizPool(prev => prev?.map((q, j) => j === i ? { ...q, [field]: value } : q) ?? null);
+  const updateQuizChoice = (i: number, ci: number, val: string) =>
+    setQuizPool(prev => prev?.map((q, j) =>
+      j === i ? { ...q, choices: q.choices.map((c, k) => k === ci ? val : c) } : q
+    ) ?? null);
+  const saveQuizPool = async () => {
+    if (!quizPool) return;
+    const r = await fetch('/api/quiz-pool', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: quizPool }),
+    });
+    if (r.ok) { setQuizSaved(true); setTimeout(() => setQuizSaved(false), 1500); }
+    else alert('저장 실패 (공항 퀴즈): ' + await r.text());
+  };
+
   const saveTeacherLines = async () => {
     const r = await fetch('/api/teacher-intro', {
       method: 'POST',
@@ -217,6 +266,15 @@ export default function AdminPage() {
     { key: 'rps_cold_intro',  label: '❄️ 추운 나라 RPS 진입 멘트', hint: '추운 나라 선택 직후. {playerName} {와과} 토큰 사용 가능' },
     { key: 'rps_cold_result', label: '🏁 추운 나라 RPS 결과 멘트', hint: 'RPS 끝난 직후. {winnerName} {이가} {winnerCountry} 토큰 사용 가능' },
     { key: 'rps_hot_result',  label: '🔥 더운 나라 RPS 결과 멘트', hint: '더운 나라 RPS 끝난 직후. 같은 토큰 사용' },
+    // 국가 도착 인트로 — 야외/실내 미니게임 직전 선생님 설명 (마지막에 춥다/덥다 힌트)
+    { key: 'finland_outdoor', label: '🇫🇮 핀란드 야외 (라플란드 시내, -15℃)', hint: '도착 시 미니게임 직전' },
+    { key: 'finland_indoor',  label: '🇫🇮 핀란드 실내 (핀란드식 사우나, +85℃)', hint: '도착 시 미니게임 직전' },
+    { key: 'canada_outdoor',  label: '🇨🇦 캐나다 야외 (옐로나이프 호숫가, -30℃)', hint: '도착 시 미니게임 직전' },
+    { key: 'canada_indoor',   label: '🇨🇦 캐나다 실내 (노천 핫스프링, +38℃)', hint: '도착 시 미니게임 직전' },
+    { key: 'dubai_outdoor',   label: '🇦🇪 두바이 야외 (사막, +45℃)', hint: '도착 시 미니게임 직전' },
+    { key: 'dubai_indoor',    label: '🇦🇪 두바이 실내 (스키두바이, -3℃)', hint: '도착 시 미니게임 직전' },
+    { key: 'egypt_outdoor',   label: '🇪🇬 이집트 야외 (기자 피라미드, +40℃)', hint: '도착 시 미니게임 직전' },
+    { key: 'egypt_indoor',    label: '🇪🇬 이집트 실내 (알렉산드리아 카타콤, 서늘)', hint: '도착 시 미니게임 직전' },
   ];
 
   const savePaths = async () => {
@@ -348,6 +406,41 @@ export default function AdminPage() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* 노드 라벨 편집 (countrymap 전용) — 게시판 안내 메시지 "OO으로 이동하세요"의 OO에 들어가는 텍스트 */}
+          {pathMode === 'countrymap' && countryNodes && (
+            <div className="flex flex-col gap-1 bg-slate-800 border border-slate-700 rounded p-3 max-w-3xl">
+              <div className="flex items-baseline gap-2 mb-1">
+                <h3 className="text-sm font-semibold">🪧 게시판 안내 라벨</h3>
+                <span className="text-xs text-slate-400">
+                  게임 중앙 게시판에 "<span className="text-slate-200">○○ 이동하세요</span>" 형태로 표시됨
+                </span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {(['airport', 'outdoor', 'indoor'] as const).map(id => {
+                  const node = countryNodes.nodes.find(n => n.id === id);
+                  if (!node) return null;
+                  return (
+                    <label key={id} className="flex items-center gap-2 text-sm">
+                      <span className="w-16 text-slate-400 shrink-0">
+                        {DEST_EMOJI[id]} {id === 'airport' ? '공항' : id === 'outdoor' ? '야외' : '실내'}
+                      </span>
+                      <input
+                        type="text"
+                        value={node.label ?? ''}
+                        onChange={e => updateCountryNodeLabel(id, e.target.value)}
+                        placeholder="예) 라플란드 시내"
+                        className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+              <span className="text-xs text-slate-500 mt-1">
+                💡 저장은 위쪽 "저장" 버튼 (노드+경로 동시 저장)
+              </span>
             </div>
           )}
 
@@ -635,13 +728,36 @@ export default function AdminPage() {
               {lines.length === 0 && (
                 <p className="text-slate-500 text-sm italic">멘트가 비어 있습니다. "+ 페이지 추가"로 시작.</p>
               )}
-              {lines.map((line, i) => (
+              {lines.map((line, i) => {
+                const size: TeacherSize = line.size ?? 'md';
+                return (
                 <div key={i} className="flex items-start gap-2 bg-slate-800 border border-slate-700 rounded p-2">
-                  <span className="text-xs text-slate-400 font-mono mt-2 w-6 text-right">{i + 1}</span>
+                  <div className="flex flex-col items-end gap-1 mt-2 shrink-0">
+                    <span className="text-xs text-slate-400 font-mono">{i + 1}</span>
+                    <div className="flex gap-0.5" role="radiogroup" aria-label="글자 크기">
+                      {TEACHER_SIZES.map(sz => (
+                        <button
+                          key={sz}
+                          type="button"
+                          role="radio"
+                          aria-checked={size === sz}
+                          onClick={() => updateTeacherSize(g.key, i, sz)}
+                          className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                            size === sz
+                              ? 'bg-indigo-500 border-indigo-400 text-white'
+                              : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                          }`}
+                          title={`글자 크기: ${TEACHER_SIZE_LABEL[sz]}`}
+                        >
+                          {TEACHER_SIZE_LABEL[sz]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <textarea
-                    value={line}
-                    onChange={(e) => updateTeacherLine(g.key, i, e.target.value)}
-                    rows={Math.max(2, (line.match(/\n/g)?.length ?? 0) + 1)}
+                    value={line.text}
+                    onChange={(e) => updateTeacherText(g.key, i, e.target.value)}
+                    rows={Math.max(2, (line.text.match(/\n/g)?.length ?? 0) + 1)}
                     className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm font-mono resize-y"
                     placeholder="멘트 입력 (Enter로 줄바꿈)"
                   />
@@ -665,10 +781,97 @@ export default function AdminPage() {
                     >✕</button>
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           );
         })}
+      </section>
+
+      {/* ── 공항 퀴즈 편집 ─────────────────────────────────────────────── */}
+      <section className="border-t border-slate-700 pt-4 mt-4 flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold">✈️ 공항 탑승 게이트 퀴즈</h2>
+          <span className="text-xs text-slate-400">정답을 맞춰야 비행기표가 발급되는 모달. 문제 추가/삭제는 코드에서.</span>
+          <button
+            onClick={saveQuizPool}
+            disabled={!quizPool}
+            className="bg-sky-600 hover:bg-sky-700 disabled:opacity-40 text-sm px-3 py-1 rounded ml-auto"
+          >
+            저장 (전체)
+          </button>
+          {quizSaved && <span className="text-green-400 text-sm">✅ 저장 완료</span>}
+        </div>
+        {!quizPool && <p className="text-slate-500 text-sm italic">퀴즈 풀을 로드 중입니다…</p>}
+        {quizPool && (() => {
+          const CATEGORY_META: Record<QuizQuestion['category'], { label: string; color: string }> = {
+            cold_response:    { label: '❄️ 추울 때 반응',  color: 'border-sky-500' },
+            hot_response:     { label: '🔥 더울 때 반응',  color: 'border-orange-500' },
+            neuro_vs_hormone: { label: '🧠 신경 vs 호르몬', color: 'border-purple-500' },
+          };
+          const grouped: Record<QuizQuestion['category'], { q: QuizQuestion; i: number }[]> = {
+            cold_response: [], hot_response: [], neuro_vs_hormone: [],
+          };
+          quizPool.forEach((q, i) => grouped[q.category].push({ q, i }));
+          return (
+            <div className="flex flex-col gap-4 max-w-4xl">
+              {(Object.keys(grouped) as QuizQuestion['category'][]).map(cat => (
+                <div key={cat} className={`border-l-4 ${CATEGORY_META[cat].color} bg-slate-800/50 rounded p-3 flex flex-col gap-2`}>
+                  <h3 className="font-semibold text-sm">{CATEGORY_META[cat].label} <span className="text-slate-400 font-normal">({grouped[cat].length}문제)</span></h3>
+                  {grouped[cat].map(({ q, i }) => (
+                    <div key={q.id} className="bg-slate-900 border border-slate-700 rounded p-2.5 flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs bg-slate-700 text-slate-300 font-mono px-1.5 py-0.5 rounded">{q.id}</span>
+                        <textarea
+                          value={q.question}
+                          onChange={e => updateQuizField(i, 'question', e.target.value)}
+                          rows={Math.max(1, (q.question.match(/\n/g)?.length ?? 0) + 1)}
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm resize-y"
+                          placeholder="문제 텍스트"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1 pl-2">
+                        {q.choices.map((c, ci) => (
+                          <label key={ci} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`ans-${q.id}`}
+                              checked={q.answerIndex === ci}
+                              onChange={() => updateQuizField(i, 'answerIndex', ci)}
+                              className="accent-emerald-500"
+                              title="정답으로 설정"
+                            />
+                            <span className={`text-xs font-mono w-4 ${q.answerIndex === ci ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                              {ci + 1}.
+                            </span>
+                            <input
+                              type="text"
+                              value={c}
+                              onChange={e => updateQuizChoice(i, ci, e.target.value)}
+                              className={`flex-1 bg-slate-800 border rounded px-2 py-1 text-sm ${
+                                q.answerIndex === ci ? 'border-emerald-600' : 'border-slate-700'
+                              }`}
+                              placeholder={`선택지 ${ci + 1}`}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex items-start gap-2 pl-2">
+                        <span className="text-xs text-emerald-400 font-mono mt-1.5 shrink-0">해설</span>
+                        <textarea
+                          value={q.explanation}
+                          onChange={e => updateQuizField(i, 'explanation', e.target.value)}
+                          rows={Math.max(1, (q.explanation.match(/\n/g)?.length ?? 0) + 1)}
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm resize-y"
+                          placeholder="정답 시 표시되는 해설"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </section>
     </main>
   );

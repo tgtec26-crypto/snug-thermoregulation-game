@@ -16,12 +16,16 @@ export type Phase =
   | 'airport_start'          // 출발국 공항 퀴즈
   | 'worldmap_to_1'          // 비행기 컷씬: 한국 → 1국
   | 'country_1_arrived'      // 1국 공항 도착
+  | 'country_1_outdoor_intro' // 1국 야외 진입 선생님 멘트
   | 'country_1_outdoor'      // 1국 야외
+  | 'country_1_indoor_intro' // 1국 실내 진입 선생님 멘트
   | 'country_1_indoor'       // 1국 실내
   | 'airport_1'              // 1국 공항 퀴즈
   | 'worldmap_to_2'          // 비행기 컷씬: 1국 → 2국
   | 'country_2_arrived'
+  | 'country_2_outdoor_intro' // 2국 야외 진입 선생님 멘트
   | 'country_2_outdoor'
+  | 'country_2_indoor_intro' // 2국 실내 진입 선생님 멘트
   | 'country_2_indoor'
   | 'airport_2'              // 2국 공항 퀴즈
   | 'worldmap_to_home'       // 비행기 컷씬: 2국 → 한국

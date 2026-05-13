@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { getCountryById } from '@/game/data/countries';
+import {
+  type TeacherLine,
+  type TeacherSize,
+  TEACHER_FONT_PX,
+  normalizeTeacherData,
+} from '@/game/data/teacherLines';
 
 type Phase = ReturnType<typeof useGameStore.getState>['phase'];
 
@@ -29,7 +35,8 @@ const FALLBACK: Partial<Record<Phase, string[]>> = {
 };
 
 // JSON 키 ↔ phase 매핑 (phase 그대로 키로 쓰기엔 너무 길어서 짧은 키 사용)
-const PHASE_TO_KEY: Partial<Record<Phase, string>> = {
+// 정적 매핑: phase → JSON key (1:1)
+const PHASE_TO_KEY_STATIC: Partial<Record<Phase, string>> = {
   classroom_intro: 'intro',
   classroom_rps_cold_intro: 'rps_cold_intro',
   classroom_rps_cold_result: 'rps_cold_result',
@@ -42,6 +49,19 @@ const NEXT_PHASE: Partial<Record<Phase, Phase>> = {
   classroom_rps_cold_intro: 'classroom_rps_cold',
   classroom_rps_cold_result: 'classroom_choose_hot',
   classroom_rps_hot_result: 'classroom_depart',
+  // 국가 야외/실내 도착 인트로 → 미니게임 단계 (intro 접미사 제거)
+  country_1_outdoor_intro: 'country_1_outdoor',
+  country_1_indoor_intro:  'country_1_indoor',
+  country_2_outdoor_intro: 'country_2_outdoor',
+  country_2_indoor_intro:  'country_2_indoor',
+};
+
+// 국가 도착 인트로 phase ↔ slot/area 추출
+const COUNTRY_INTRO_PHASE_INFO: Partial<Record<Phase, { slot: 1 | 2; area: 'outdoor' | 'indoor' }>> = {
+  country_1_outdoor_intro: { slot: 1, area: 'outdoor' },
+  country_1_indoor_intro:  { slot: 1, area: 'indoor'  },
+  country_2_outdoor_intro: { slot: 2, area: 'outdoor' },
+  country_2_indoor_intro:  { slot: 2, area: 'indoor'  },
 };
 
 const TYPE_SPEED = 35; // ms/char
@@ -80,11 +100,19 @@ export function TeacherIntro() {
   const chosenHot = useGameStore(s => s.chosenHot);
   const actualHot = useGameStore(s => s.actualHot);
   const setPhase = useGameStore(s => s.setPhase);
-  const [allLines, setAllLines] = useState<Record<string, string[]>>({});
+  const [allLines, setAllLines] = useState<Record<string, TeacherLine[]>>({});
   const [idx, setIdx] = useState(0);
   const [shown, setShown] = useState(0);
 
-  const key = PHASE_TO_KEY[phase];
+  // 정적 매핑 우선, 그 다음 country_X_<area>_intro → "<country>_<area>" 동적 매핑
+  let key: string | undefined = PHASE_TO_KEY_STATIC[phase];
+  if (!key) {
+    const info = COUNTRY_INTRO_PHASE_INFO[phase];
+    if (info) {
+      const country = info.slot === 1 ? actualCold : actualHot;
+      if (country) key = `${country}_${info.area}`;
+    }
+  }
   const isActive = !!key;
 
   // 동적 템플릿 컨텍스트 (phase별로 winnerName/winnerCountry 결정)
@@ -108,9 +136,7 @@ export function TeacherIntro() {
     if (!isActive) return;
     fetch(`/data/teacher-intro.json?t=${Date.now()}`)
       .then(r => r.json())
-      .then((data: Record<string, string[]>) => {
-        if (data && typeof data === 'object') setAllLines(data);
-      })
+      .then((data: unknown) => setAllLines(normalizeTeacherData(data)))
       .catch(() => { /* fallback */ });
   }, [isActive]);
 
@@ -128,13 +154,18 @@ export function TeacherIntro() {
     setShown(0);
   }, [key]);
 
-  const rawLines: string[] = (key && allLines[key]) || (FALLBACK[phase] ?? []);
-  const lines = rawLines.map(l => applyTemplate(l, ctx));
+  const rawLines: TeacherLine[] =
+    (key && allLines[key]) ||
+    (FALLBACK[phase] ?? []).map((s) => ({ text: s }));
+  const lines = rawLines.map(l => ({
+    text: applyTemplate(l.text, ctx),
+    size: (l.size ?? 'md') as TeacherSize,
+  }));
 
   // 타이핑 애니메이션
   useEffect(() => {
     if (!isActive) return;
-    const cur = lines[idx] ?? '';
+    const cur = lines[idx]?.text ?? '';
     if (shown >= cur.length) return;
     const t = setTimeout(() => setShown(s => s + 1), TYPE_SPEED);
     return () => clearTimeout(t);
@@ -143,14 +174,16 @@ export function TeacherIntro() {
   if (!isActive) return null;
   if (lines.length === 0) return null;
 
-  const line = lines[idx] ?? '';
-  const done = shown >= line.length;
+  const current = lines[idx] ?? { text: '', size: 'md' as TeacherSize };
+  const lineText = current.text;
+  const fontPx = TEACHER_FONT_PX[current.size];
+  const done = shown >= lineText.length;
   const isLast = idx === lines.length - 1;
   const next = NEXT_PHASE[phase];
 
   const advance = () => {
     if (!done) {
-      setShown(line.length);
+      setShown(lineText.length);
       return;
     }
     if (isLast) {
@@ -180,9 +213,12 @@ export function TeacherIntro() {
           style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
         >
           <div className="text-amber-300 font-semibold text-[28px] mb-2">선생님</div>
-          <p className="text-[32px] leading-relaxed text-center min-h-[3em] whitespace-pre-wrap">
-            <span>{line.slice(0, shown)}</span>
-            <span className="opacity-0" aria-hidden="true">{line.slice(shown)}</span>
+          <p
+            className="leading-relaxed text-center min-h-[3em] whitespace-pre-wrap transition-[font-size] duration-150"
+            style={{ fontSize: `${fontPx}px` }}
+          >
+            <span>{lineText.slice(0, shown)}</span>
+            <span className="opacity-0" aria-hidden="true">{lineText.slice(shown)}</span>
           </p>
           <div className="flex justify-end mt-2 text-xs text-white/60">
             {done ? (isLast ? '클릭해서 진행 ▶' : '다음 ▶') : '클릭해서 건너뛰기'}

@@ -70,7 +70,7 @@ export function GuidanceBanner() {
   const SCALE = 0.7;
   const boardW = 400 * sx * SCALE;
   const boardH = 228 * sx * SCALE;  // 정사각 비율 유지 위해 sx 사용 (sx≈sy)
-  const fontSize = 26 * sx * SCALE;
+  const fontSize = 26 * 1.5 * sx * SCALE;
 
   return (
     <div
@@ -99,7 +99,12 @@ export function GuidanceBanner() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: `${28 * sx * SCALE}px ${48 * sx * SCALE}px`,
+          // 게시판 이미지의 상단 헤더(Departures · Terminal 3)·하단 푸터 영역을 비워두고
+          // 가운데 어두운 body 영역에 텍스트가 정렬되도록 비대칭 패딩 사용
+          paddingTop: `${boardH * 0.30}px`,
+          paddingBottom: `${boardH * 0.08}px`,
+          paddingLeft: `${48 * sx * SCALE}px`,
+          paddingRight: `${48 * sx * SCALE}px`,
           textAlign: 'center',
           fontWeight: 700,
           fontSize: `${fontSize}px`,

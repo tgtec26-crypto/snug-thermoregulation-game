@@ -15,7 +15,7 @@
       "x": 596,
       "y": 191,
       "type": "walk",
-      "label": "라플란드 시내",
+      "label": "라플란드",
       "labelSvg": "/assets/textbutton/finland_lapland_button.svg"
     },
     {
@@ -23,7 +23,7 @@
       "x": 308,
       "y": 470,
       "type": "walk",
-      "label": "사우나",
+      "label": "핀란드 사우나",
       "labelSvg": "/assets/textbutton/finland_sauna_button.svg"
     }
   ]

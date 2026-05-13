@@ -1,6 +1,30 @@
 import type { QuizQuestion } from '@/game/types';
 
-export const QUIZ_POOL: QuizQuestion[] = [
+const VALID_CATEGORIES = new Set<QuizQuestion['category']>([
+  'cold_response',
+  'hot_response',
+  'neuro_vs_hormone',
+]);
+
+function isValidQuestion(q: unknown): q is QuizQuestion {
+  if (!q || typeof q !== 'object') return false;
+  const r = q as Record<string, unknown>;
+  return (
+    typeof r.id === 'string' &&
+    typeof r.question === 'string' &&
+    Array.isArray(r.choices) &&
+    r.choices.length === 4 &&
+    r.choices.every((c) => typeof c === 'string') &&
+    typeof r.answerIndex === 'number' &&
+    r.answerIndex >= 0 &&
+    r.answerIndex < 4 &&
+    typeof r.category === 'string' &&
+    VALID_CATEGORIES.has(r.category as QuizQuestion['category']) &&
+    typeof r.explanation === 'string'
+  );
+}
+
+const DEFAULT_QUIZ_POOL: QuizQuestion[] = [
   // === cold_response (추울 때 반응) ===
   {
     id: 'c1',
@@ -128,8 +152,43 @@ export const QUIZ_POOL: QuizQuestion[] = [
   },
 ];
 
+/** 테스트/legacy 코드용 alias — 빌트인 기본 풀을 그대로 노출 */
+export const QUIZ_POOL = DEFAULT_QUIZ_POOL;
+
+let activePool: QuizQuestion[] = DEFAULT_QUIZ_POOL;
+let loadPromise: Promise<void> | null = null;
+
+export function getQuizPool(): readonly QuizQuestion[] {
+  return activePool;
+}
+
+export function getDefaultQuizPool(): readonly QuizQuestion[] {
+  return DEFAULT_QUIZ_POOL;
+}
+
+/**
+ * /data/quiz-pool.json 을 한 번만 fetch 해서 런타임 풀을 갱신.
+ * 두 번째 이후 호출은 동일 Promise 반환. fetch 실패 시 DEFAULT 유지.
+ */
+export function loadQuizPool(): Promise<void> {
+  if (loadPromise) return loadPromise;
+  loadPromise = (async () => {
+    try {
+      const res = await fetch(`/data/quiz-pool.json?t=${Date.now()}`);
+      if (!res.ok) return;
+      const data: unknown = await res.json();
+      if (Array.isArray(data) && data.every(isValidQuestion)) {
+        activePool = data;
+      }
+    } catch {
+      /* fallback to DEFAULT_QUIZ_POOL */
+    }
+  })();
+  return loadPromise;
+}
+
 export function drawQuiz(excludeIds: string[]): QuizQuestion | null {
-  const available = QUIZ_POOL.filter(q => !excludeIds.includes(q.id));
+  const available = activePool.filter(q => !excludeIds.includes(q.id));
   if (available.length === 0) return null;
   const idx = Math.floor(Math.random() * available.length);
   return available[idx];
