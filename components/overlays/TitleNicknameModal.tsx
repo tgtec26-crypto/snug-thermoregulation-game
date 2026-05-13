@@ -21,7 +21,7 @@ export function TitleNicknameModal() {
   // 하단 중앙에 input + 버튼 한 줄. 배경 이미지를 거의 가리지 않도록 컴팩트.
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center">
-      <div className="pointer-events-auto flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg px-3 py-2">
+      <div className="pointer-events-auto flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg px-3 py-[7px]">
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -34,7 +34,7 @@ export function TitleNicknameModal() {
         <button
           onClick={handleStart}
           disabled={value.trim().length < 1}
-          className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white rounded-full px-4 py-1.5 font-semibold text-sm"
+          className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-500 text-white rounded-full px-4 py-1.5 font-semibold text-sm"
         >
           시작
         </button>

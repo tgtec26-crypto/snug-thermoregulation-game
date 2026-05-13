@@ -5,6 +5,7 @@ import { HUDBar } from '@/components/overlays/HUDBar';
 import { Toast } from '@/components/overlays/Toast';
 import { TitleNicknameModal } from '@/components/overlays/TitleNicknameModal';
 import { ClassroomChoice } from '@/components/overlays/ClassroomChoice';
+import { TeacherIntro } from '@/components/overlays/TeacherIntro';
 import { RPSModal } from '@/components/overlays/RPSModal';
 import { QuizModal } from '@/components/overlays/QuizModal';
 import { MinigameModal } from '@/components/overlays/MinigameModal';
@@ -30,6 +31,7 @@ export function UIOverlay() {
       {showHud && <HUDBar />}
       <Toast />
       <TitleNicknameModal />
+      <TeacherIntro />
       <ClassroomChoice />
       <RPSModal />
       <QuizModal />

@@ -10,22 +10,7 @@ export function ClassroomChoice() {
   const chooseHot = useGameStore(s => s.chooseHot);
   const setPhase = useGameStore(s => s.setPhase);
 
-  if (phase === 'classroom_intro') {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/40">
-        <div className="bg-white rounded-xl p-6 shadow-lg w-[420px] flex flex-col gap-3">
-          <h2 className="text-lg font-bold text-slate-800">학급 회의가 시작됐어요</h2>
-          <p className="text-slate-700">우리 반은 이번 수학여행에서 추운 나라 1곳과 더운 나라 1곳을 다녀오기로 했어요. 어디로 가고 싶은지 골라봅시다.</p>
-          <button
-            onClick={() => setPhase('classroom_choose_cold')}
-            className="bg-sky-600 hover:bg-sky-700 text-white rounded py-2 font-semibold mt-2"
-          >
-            네, 시작할게요
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // classroom_intro는 TeacherIntro 컴포넌트가 담당.
 
   if (phase === 'classroom_choose_cold' || phase === 'classroom_choose_hot') {
     const group = phase === 'classroom_choose_cold' ? 'cold' : 'hot';
@@ -35,7 +20,7 @@ export function ClassroomChoice() {
     const onPick = (c: Country) => {
       if (group === 'cold') {
         chooseCold(c);
-        setPhase('classroom_rps_cold');
+        setPhase('classroom_rps_cold_intro');
       } else {
         chooseHot(c);
         setPhase('classroom_rps_hot');
@@ -43,21 +28,42 @@ export function ClassroomChoice() {
     };
 
     return (
-      <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/40">
-        <div className="bg-white rounded-xl p-6 shadow-lg w-[420px] flex flex-col gap-3">
-          <h2 className="text-lg font-bold text-slate-800">{title}</h2>
-          <p className="text-slate-700">두 곳 중 가고 싶은 곳을 골라봐요.</p>
-          <div className="grid grid-cols-2 gap-3 mt-2">
-            {choices.map(c => (
-              <button
-                key={c.id}
-                onClick={() => onPick(c.id)}
-                className="border border-slate-300 hover:border-sky-500 rounded-lg p-3 flex flex-col items-center gap-2 transition"
-              >
-                <span className="text-4xl">{c.flagEmoji}</span>
-                <span className="text-sm text-slate-800 font-semibold text-center">{c.displayName.replace(c.flagEmoji + ' ', '')}</span>
-              </button>
-            ))}
+      <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/50 backdrop-blur-[2px] px-6">
+        <div
+          className="bg-black/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl px-10 py-8 w-full max-w-[1100px] flex flex-col gap-6"
+          style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+        >
+          <div className="flex flex-col items-center gap-2">
+            <h2 className="text-amber-300 font-bold text-[36px] tracking-wide">{title}</h2>
+            <p className="text-white/80 text-[20px]">두 곳 중 가고 싶은 곳을 골라봐요.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-8">
+            {choices.map(c => {
+              const cleanName = c.displayName.replace(c.flagEmoji + ' ', '');
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => onPick(c.id)}
+                  className="group bg-white/10 hover:bg-white/20 border border-white/20 hover:border-amber-300 rounded-2xl p-5 flex flex-col items-center gap-4 transition shadow-lg"
+                >
+                  {/* 대표 이미지 — 불투명 */}
+                  <div className="w-full aspect-[16/10] rounded-xl overflow-hidden border border-white/30 shadow-inner bg-slate-900">
+                    <img
+                      src={c.previewImage}
+                      alt={cleanName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white text-[26px] font-bold">{cleanName}</span>
+                  </div>
+                  <span className="text-white/60 text-sm">
+                    {c.outdoorLabel} · {c.indoorLabel}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

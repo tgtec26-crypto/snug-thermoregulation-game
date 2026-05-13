@@ -84,11 +84,19 @@ export default function AdminPage() {
   const [countryNodes, setCountryNodes]   = useState<SceneNodes | null>(null);
   const [countryPaths, setCountryPaths]   = useState<CountryMapPaths | null>(null);
 
+  // ── 선생님 멘트 편집 상태 ──
+  // 키별 멘트 묶음 (예: { intro: [...], rps_cold_intro: [...] })
+  const [teacherData, setTeacherData]     = useState<Record<string, string[]>>({});
+  const [teacherSaved, setTeacherSaved]   = useState(false);
+
   // 경로 데이터 로드
   useEffect(() => {
     fetch('/data/paths-worldmap.json').then(r => r.json()).then(setWorldmapPaths);
     fetch('/data/nodes-worldmap.json').then(r => r.json()).then(setWorldmapNodes);
     fetch('/data/paths-korea.json').then(r => r.json()).then(setKoreaPaths);
+    fetch('/data/teacher-intro.json').then(r => r.json()).then((d: Record<string, string[]>) => {
+      if (d && typeof d === 'object' && !Array.isArray(d)) setTeacherData(d);
+    });
   }, []);
 
   // 국가 맵 데이터 로드 (국가 변경 시마다)
@@ -168,6 +176,48 @@ export default function AdminPage() {
       [route]: { waypoints: countryPaths[route].waypoints.filter((_, j) => j !== i) },
     });
   };
+
+  // ── 선생님 멘트 편집 핸들러 ──
+  const updateTeacherLine = (key: string, i: number, val: string) => {
+    setTeacherData(prev => ({
+      ...prev,
+      [key]: (prev[key] ?? []).map((l, j) => (j === i ? val : l)),
+    }));
+  };
+  const addTeacherLine = (key: string) =>
+    setTeacherData(prev => ({ ...prev, [key]: [...(prev[key] ?? []), ''] }));
+  const removeTeacherLine = (key: string, i: number) =>
+    setTeacherData(prev => ({
+      ...prev,
+      [key]: (prev[key] ?? []).filter((_, j) => j !== i),
+    }));
+  const moveTeacherLine = (key: string, i: number, dir: -1 | 1) => {
+    setTeacherData(prev => {
+      const arr = prev[key] ?? [];
+      const j = i + dir;
+      if (j < 0 || j >= arr.length) return prev;
+      const next = [...arr];
+      [next[i], next[j]] = [next[j], next[i]];
+      return { ...prev, [key]: next };
+    });
+  };
+  const saveTeacherLines = async () => {
+    const r = await fetch('/api/teacher-intro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: teacherData }),
+    });
+    if (r.ok) { setTeacherSaved(true); setTimeout(() => setTeacherSaved(false), 1500); }
+    else alert('저장 실패 (선생님 멘트)');
+  };
+
+  // 편집 가능한 멘트 그룹 정의 (키 → 라벨)
+  const TEACHER_GROUPS: { key: string; label: string; hint?: string }[] = [
+    { key: 'intro',           label: '🏫 학급 회의 도입 멘트', hint: '교실 첫 화면에 등장' },
+    { key: 'rps_cold_intro',  label: '❄️ 추운 나라 RPS 진입 멘트', hint: '추운 나라 선택 직후. {playerName} {와과} 토큰 사용 가능' },
+    { key: 'rps_cold_result', label: '🏁 추운 나라 RPS 결과 멘트', hint: 'RPS 끝난 직후. {winnerName} {이가} {winnerCountry} 토큰 사용 가능' },
+    { key: 'rps_hot_result',  label: '🔥 더운 나라 RPS 결과 멘트', hint: '더운 나라 RPS 끝난 직후. 같은 토큰 사용' },
+  ];
 
   const savePaths = async () => {
     if (pathMode === 'countrymap') {
@@ -554,6 +604,72 @@ export default function AdminPage() {
             : '✈️ 공항·🌄 야외·🏠 실내 노드 드래그로 위치 조정 / 다이아몬드 = 웨이포인트(드래그 이동, 우클릭 삭제) / + WP 버튼으로 추가 → 저장'}
           </p>
       </>
+
+      {/* ── 선생님 멘트 편집 ─────────────────────────────────────────────── */}
+      <section className="border-t border-slate-700 pt-4 mt-4 flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold">👩‍🏫 선생님 멘트</h2>
+          <span className="text-xs text-slate-400">대화창에 타이핑되는 멘트. 페이지 = 한 대화창. 페이지 내 줄바꿈은 Enter.</span>
+          <button
+            onClick={saveTeacherLines}
+            className="bg-sky-600 hover:bg-sky-700 text-sm px-3 py-1 rounded ml-auto"
+          >
+            저장 (전체)
+          </button>
+          {teacherSaved && <span className="text-green-400 text-sm">✅ 저장 완료</span>}
+        </div>
+        {TEACHER_GROUPS.map(g => {
+          const lines = teacherData[g.key] ?? [];
+          return (
+            <div key={g.key} className="border border-slate-700 rounded-lg p-3 flex flex-col gap-2 max-w-4xl">
+              <div className="flex items-center gap-3">
+                <h3 className="font-semibold">{g.label}</h3>
+                {g.hint && <span className="text-xs text-slate-400">{g.hint}</span>}
+                <button
+                  onClick={() => addTeacherLine(g.key)}
+                  className="bg-emerald-700 hover:bg-emerald-600 text-xs px-2 py-1 rounded ml-auto"
+                >
+                  + 페이지 추가
+                </button>
+              </div>
+              {lines.length === 0 && (
+                <p className="text-slate-500 text-sm italic">멘트가 비어 있습니다. "+ 페이지 추가"로 시작.</p>
+              )}
+              {lines.map((line, i) => (
+                <div key={i} className="flex items-start gap-2 bg-slate-800 border border-slate-700 rounded p-2">
+                  <span className="text-xs text-slate-400 font-mono mt-2 w-6 text-right">{i + 1}</span>
+                  <textarea
+                    value={line}
+                    onChange={(e) => updateTeacherLine(g.key, i, e.target.value)}
+                    rows={Math.max(2, (line.match(/\n/g)?.length ?? 0) + 1)}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm font-mono resize-y"
+                    placeholder="멘트 입력 (Enter로 줄바꿈)"
+                  />
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => moveTeacherLine(g.key, i, -1)}
+                      disabled={i === 0}
+                      className="bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-xs px-2 py-0.5 rounded"
+                      title="위로"
+                    >▲</button>
+                    <button
+                      onClick={() => moveTeacherLine(g.key, i, +1)}
+                      disabled={i === lines.length - 1}
+                      className="bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-xs px-2 py-0.5 rounded"
+                      title="아래로"
+                    >▼</button>
+                    <button
+                      onClick={() => removeTeacherLine(g.key, i)}
+                      className="bg-rose-700 hover:bg-rose-600 text-xs px-2 py-0.5 rounded"
+                      title="삭제"
+                    >✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </section>
     </main>
   );
 }

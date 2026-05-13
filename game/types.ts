@@ -5,9 +5,12 @@ export type Phase =
   | 'title'
   | 'classroom_intro'        // 도입 멘트
   | 'classroom_choose_cold'  // 추 선택
-  | 'classroom_choose_hot'   // 더 선택
+  | 'classroom_rps_cold_intro' // 추 RPS 진입 선생님 멘트
   | 'classroom_rps_cold'     // 추 가위바위보
+  | 'classroom_rps_cold_result' // 추 RPS 결과 선생님 멘트
+  | 'classroom_choose_hot'   // 더 선택
   | 'classroom_rps_hot'      // 더 가위바위보
+  | 'classroom_rps_hot_result' // 더 RPS 결과 선생님 멘트
   | 'classroom_depart'       // 출발 멘트
   | 'korea_bus_to_airport'   // 버스 컷씬: 학교 → 공항
   | 'airport_start'          // 출발국 공항 퀴즈
@@ -54,6 +57,7 @@ export interface CountryConfig {
   outdoorLabel: string;       // "라플란드 시내 (-15℃)"
   indoorLabel: string;        // "사우나 (+85℃)"
   rpsNpcName: string;         // 학급 친구 이름 (이 나라 가고 싶다는)
+  previewImage: string;       // 선택 카드용 대표 이미지 경로 (예: /assets/backgrounds/finland_lapland.png)
 }
 
 export interface NodeConfig {
