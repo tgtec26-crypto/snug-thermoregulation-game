@@ -66,10 +66,11 @@ export function GuidanceBanner() {
   const cx = canvasRect.left + (GAME_WIDTH / 2) * sx;
   const cy = canvasRect.top + (GAME_HEIGHT / 2) * sy;
 
-  // 원본 게시판 이미지 400×228 — 캔버스 스케일에 맞춰 비례 축소/확대
-  const boardW = 400 * sx;
-  const boardH = 228 * sx;          // 정사각 비율 유지 위해 sx 사용 (sx≈sy)
-  const fontSize = 26 * sx;
+  // 원본 게시판 이미지 400×228 — 캔버스 스케일에 맞춰 비례 축소/확대 (70%로 축소)
+  const SCALE = 0.7;
+  const boardW = 400 * sx * SCALE;
+  const boardH = 228 * sx * SCALE;  // 정사각 비율 유지 위해 sx 사용 (sx≈sy)
+  const fontSize = 26 * sx * SCALE;
 
   return (
     <div
@@ -98,13 +99,13 @@ export function GuidanceBanner() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: `${28 * sx}px ${48 * sx}px`,
+          padding: `${28 * sx * SCALE}px ${48 * sx * SCALE}px`,
           textAlign: 'center',
           fontWeight: 700,
           fontSize: `${fontSize}px`,
           lineHeight: 1.25,
-          color: '#1a2942',
-          textShadow: '0 1px 0 rgba(255,255,255,0.6)',
+          color: '#ffffff',
+          textShadow: '0 0 6px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8)',
           wordBreak: 'keep-all',
           overflowWrap: 'break-word',
         }}
