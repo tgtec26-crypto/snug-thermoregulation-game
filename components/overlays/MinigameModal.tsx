@@ -1,19 +1,24 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { MINIGAME_SUCCESS_DELTA } from '@/game/config';
 import type { Phase } from '@/game/types';
 import { ShiverRhythmGame } from './ShiverRhythmGame';
+import { WhackWordMole } from './minigames/WhackWordMole';
+import { CatchFallingItems } from './minigames/CatchFallingItems';
+import { SpotTheDifference } from './minigames/SpotTheDifference';
 
 const COUNTRY_PHASES = new Set<Phase>([
   'country_1_outdoor', 'country_1_indoor',
   'country_2_outdoor', 'country_2_indoor',
 ]);
 
-type MinigameKind = 'shiver' | 'sweat';
-
-const SHIVER_MISS_DELTA = 0.1;  // 미스 1회당 체온 -0.1℃
+export interface MinigameResult {
+  success: boolean;
+  /** 게임별 의미 다름 — 디버그/추후 별점 계산용 */
+  score: number;
+}
 
 export function MinigameModal() {
   const phase = useGameStore(s => s.phase);
@@ -21,36 +26,12 @@ export function MinigameModal() {
   const showToast = useGameStore(s => s.showToast);
   const setPhase = useGameStore(s => s.setPhase);
 
-  const [active, setActive] = useState(false);
-  const [kind, setKind] = useState<MinigameKind>('shiver');
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(8);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const scoreRef = useRef(0);
-  const kindRef = useRef<MinigameKind>('shiver');
   const phaseRef = useRef<Phase>(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
-  // phase 변화에 따라 미니게임 자동 시작 (phase 진입 시 한 번)
-  useEffect(() => {
-    phaseRef.current = phase;
-    if (!COUNTRY_PHASES.has(phase)) {
-      setActive(false);
-      return;
-    }
-    // 환경에 맞춰 미니게임 종류 결정 (cold_outdoor=shiver, cold_indoor=sweat, hot_outdoor=sweat, hot_indoor=shiver)
-    const isShiver = phase === 'country_1_outdoor' || phase === 'country_2_indoor';
-    setKind(isShiver ? 'shiver' : 'sweat');
-    kindRef.current = isShiver ? 'shiver' : 'sweat';
-    setScore(0);
-    scoreRef.current = 0;
-    setTimeLeft(8);
-    setActive(true);
-  }, [phase]);
+  const isActive = COUNTRY_PHASES.has(phase);
 
-  // 떨림 케이스 = 리듬게임 사용. 그 외(땀)는 기존 탭 카운터 유지.
-  const isShiverRhythm = active && kind === 'shiver';
-
-  // 다음 phase 결정 (둘 다 공용)
+  // 다음 phase로 진행
   const advancePhase = useCallback(() => {
     const p = phaseRef.current;
     const nextPhase: Phase | null =
@@ -60,104 +41,61 @@ export function MinigameModal() {
     if (nextPhase) setPhase(nextPhase);
   }, [setPhase]);
 
-  // ─────────────── 리듬게임 콜백 ───────────────
+  // ─────────────── 리듬게임용 콜백 (추1 야외) ───────────────
   const handleShiverSuccess = useCallback(() => {
     adjustTemp(+MINIGAME_SUCCESS_DELTA);
     showToast('🔥 떨림 성공! 체온 ↑');
   }, [adjustTemp, showToast]);
 
-  const handleMiss = useCallback(() => {
-    adjustTemp(-SHIVER_MISS_DELTA);
+  const handleShiverMiss = useCallback(() => {
+    adjustTemp(-0.1);
   }, [adjustTemp]);
 
+  // 공통 종료 핸들러
+  const handleFinish = useCallback((label: string) => (result: MinigameResult) => {
+    if (result.success) {
+      showToast(`✅ ${label} 성공!`);
+    } else {
+      showToast(`아쉽... ${label} — 다음 단계로 갑니다`);
+    }
+    setTimeout(() => advancePhase(), 1200);
+  }, [showToast, advancePhase]);
+
   const handleRhythmFinish = useCallback((result: { hits: number; misses: number; shiverPops: number }) => {
-    setActive(false);
     if (result.shiverPops > 0) {
       showToast(`💪 떨림 ${result.shiverPops}회 성공! 체온 회복`);
     } else {
       showToast('아쉽... 다음 단계로 갑니다');
     }
     setTimeout(() => advancePhase(), 1500);
-  }, [advancePhase, showToast]);
+  }, [showToast, advancePhase]);
 
-  // ─────────────── 기존 탭 카운터 (땀 케이스) ───────────────
-  useEffect(() => {
-    if (!active || isShiverRhythm) return;
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          // defer finish() — updater 함수는 부수효과 없어야 함 (mid-render setState 경고 회피)
-          setTimeout(() => finish(), 0);
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, isShiverRhythm]);
+  if (!isActive) return null;
 
-  const tap = () => {
-    if (!active || isShiverRhythm) return;
-    scoreRef.current += 1;
-    setScore(scoreRef.current);
-  };
+  switch (phase) {
+    case 'country_1_outdoor':
+      // 추운 나라 야외 — 떨림 리듬게임 (Twinkle 4 레인)
+      return (
+        <ShiverRhythmGame
+          onFinish={handleRhythmFinish}
+          onShiverSuccess={handleShiverSuccess}
+          onMiss={handleShiverMiss}
+        />
+      );
 
-  const finish = () => {
-    setActive(false);
-    const success = scoreRef.current >= 10;
-    if (success) {
-      const isCooling = kindRef.current === 'sweat';
-      adjustTemp(isCooling ? -MINIGAME_SUCCESS_DELTA : +MINIGAME_SUCCESS_DELTA);
-      showToast(kindRef.current === 'shiver' ? '💪 떨림으로 열 발생! 체온 회복' : '💧 땀 발산! 체온 회복');
-    } else {
-      showToast('아쉽! 다음 단계로 갑니다');
-    }
-    setTimeout(() => advancePhase(), 1500);
-  };
+    case 'country_1_indoor':
+      // 사우나 — 단어 두더지 (더위 반응 클릭, 추위 반응 페널티)
+      return <WhackWordMole onFinish={handleFinish('두더지')} />;
 
-  if (!active) return null;
+    case 'country_2_outdoor':
+      // 사막 — 떨어지는 아이템 받기
+      return <CatchFallingItems onFinish={handleFinish('아이템 받기')} />;
 
-  if (isShiverRhythm) {
-    return (
-      <ShiverRhythmGame
-        onFinish={handleRhythmFinish}
-        onShiverSuccess={handleShiverSuccess}
-        onMiss={handleMiss}
-      />
-    );
+    case 'country_2_indoor':
+      // 스키장 — 다른 그림 찾기
+      return <SpotTheDifference onFinish={handleFinish('다른 그림 찾기')} />;
+
+    default:
+      return null;
   }
-
-  return (
-    <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/40">
-      <div className="bg-white rounded-xl p-6 shadow-lg w-[520px] flex flex-col gap-3">
-        <h2 className="text-lg font-bold text-slate-800">
-          {kind === 'shiver' ? '🥶 떨림 리듬 — 추위 반응!' : '💦 땀 닦기 — 더위 반응!'}
-        </h2>
-        <p className="text-sm text-slate-600">
-          {kind === 'shiver'
-            ? '아래 버튼을 빠르게 두드려서 떨림으로 열을 만들어요. 10번 이상 두드리면 체온 회복.'
-            : '아래 버튼을 빠르게 두드려서 땀을 발산해요. 10번 이상 두드리면 체온 회복.'}
-        </p>
-
-        <button
-          onClick={tap}
-          className="bg-sky-500 hover:bg-sky-600 active:bg-sky-700 text-white text-xl font-bold rounded-lg py-8 select-none"
-        >
-          {kind === 'shiver' ? '🥶 떨림!' : '💧 닦기!'}
-        </button>
-
-        <div className="flex justify-between text-sm">
-          <span className="text-slate-600">탭 횟수: <strong className="text-slate-900">{score}</strong></span>
-          <span className="text-slate-600">남은 시간: <strong className="text-slate-900">{timeLeft}초</strong></span>
-        </div>
-        <div className="w-full h-2 bg-slate-200 rounded overflow-hidden">
-          <div className="h-full bg-sky-500" style={{ width: `${Math.min((score/10)*100, 100)}%` }} />
-        </div>
-      </div>
-    </div>
-  );
 }
