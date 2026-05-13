@@ -2,7 +2,6 @@
 
 import { useGameStore } from '@/store/gameStore';
 import { HUDBar } from '@/components/overlays/HUDBar';
-import { Toast } from '@/components/overlays/Toast';
 import { TitleNicknameModal } from '@/components/overlays/TitleNicknameModal';
 import { ClassroomChoice } from '@/components/overlays/ClassroomChoice';
 import { TeacherIntro } from '@/components/overlays/TeacherIntro';
@@ -32,7 +31,6 @@ export function UIOverlay() {
   return (
     <>
       {showHud && <HUDBar />}
-      <Toast />
       <TitleNicknameModal />
       <TeacherIntro />
       <ClassroomChoice />

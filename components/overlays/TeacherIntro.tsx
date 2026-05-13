@@ -12,7 +12,7 @@ import {
 
 type Phase = ReturnType<typeof useGameStore.getState>['phase'];
 
-const FRIEND_NAME = '장원영';
+const FRIEND_NAME = '김원영';
 
 // phase별 기본 라인 (JSON 로드 실패/누락 시 fallback)
 const FALLBACK: Partial<Record<Phase, string[]>> = {
@@ -24,7 +24,7 @@ const FALLBACK: Partial<Record<Phase, string[]>> = {
   ],
   classroom_rps_cold_intro: [
     '우리반에서 핀란드의 라플란드를 가고 싶은 친구와 캐나다의 옐로나이프를 가고 싶은 친구가 딱 반반이에요.',
-    '각 여행지를 선택한 학생의 대표로 {playerName}{와과} 장원영이 서로 가위바위보로 결정해볼게요.',
+    '각 여행지를 선택한 학생의 대표로 {playerName}{와과} 김원영이 서로 가위바위보로 결정해볼게요.',
   ],
   classroom_rps_cold_result: [
     '{winnerName}{이가} 이겼으므로 이번 추운 나라 수학 여행지는 {winnerCountry}입니다.',
@@ -197,9 +197,9 @@ export function TeacherIntro() {
   return (
     <div
       onClick={advance}
-      className="fixed inset-x-0 bottom-0 z-40 cursor-pointer pb-6"
+      className="fixed inset-0 z-40 cursor-pointer bg-black/50 backdrop-blur-[2px] flex items-end justify-center pb-6"
     >
-      <div className="relative mx-auto max-w-[922px] px-6">
+      <div className="relative mx-auto w-full max-w-[922px] px-6">
         {/* 선생님 초상화 */}
         <img
           src="/assets/etc/teacher.png"
@@ -207,12 +207,18 @@ export function TeacherIntro() {
           className="absolute left-4 -top-48 h-48 w-auto pointer-events-none drop-shadow-2xl"
           style={{ imageRendering: 'pixelated' }}
         />
+        {/* 선생님 이름 (캐릭터 오른쪽 아래) */}
+        <div
+          className="absolute left-[170px] -top-10 text-amber-300 font-semibold text-[29px] whitespace-nowrap pointer-events-none"
+          style={{ textShadow: '0 2px 6px rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.9)' }}
+        >
+          최종순 선생님
+        </div>
         {/* 대화창 */}
         <div
-          className="bg-black/70 backdrop-blur-sm text-white rounded-2xl px-6 py-5 shadow-2xl border border-white/20"
+          className="relative bg-black/70 backdrop-blur-sm text-white rounded-2xl px-6 py-5 shadow-2xl border border-white/20"
           style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
         >
-          <div className="text-amber-300 font-semibold text-[28px] mb-2">선생님</div>
           <p
             className="leading-relaxed text-center min-h-[3em] whitespace-pre-wrap transition-[font-size] duration-150"
             style={{ fontSize: `${fontPx}px` }}
@@ -220,7 +226,7 @@ export function TeacherIntro() {
             <span>{lineText.slice(0, shown)}</span>
             <span className="opacity-0" aria-hidden="true">{lineText.slice(shown)}</span>
           </p>
-          <div className="flex justify-end mt-2 text-xs text-white/60">
+          <div className="absolute right-6 bottom-2 text-lg text-white/60 pointer-events-none">
             {done ? (isLast ? '클릭해서 진행 ▶' : '다음 ▶') : '클릭해서 건너뛰기'}
           </div>
         </div>

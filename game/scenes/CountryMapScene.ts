@@ -75,7 +75,7 @@ export class CountryMapScene extends Phaser.Scene {
     // <char>_walk_down frame 0 = idle 포즈 (자매 프로젝트 패턴)
     this.player = this.add.sprite(startNode.x, startNode.y, `${playerKey}_walk_down`, 0)
       .setOrigin(0.5, 1)
-      .setDisplaySize(80, 150);
+      .setDisplaySize(64, 120);
 
     // React 오버레이가 SVG 버튼 자동 렌더 (NodeLabelOverlay)
     useGameStore.getState().setActiveNodes(this.nodesData);

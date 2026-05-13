@@ -87,7 +87,8 @@ export function MinigameModal() {
       setTimeLeft(t => {
         if (t <= 1) {
           if (timerRef.current) clearInterval(timerRef.current);
-          finish();
+          // defer finish() — updater 함수는 부수효과 없어야 함 (mid-render setState 경고 회피)
+          setTimeout(() => finish(), 0);
           return 0;
         }
         return t - 1;

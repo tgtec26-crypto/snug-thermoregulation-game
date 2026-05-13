@@ -170,6 +170,8 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'thermoregulation-game',
+      version: 2,   // 누적된 airportQuizAttemptedIds 등 무효화 (이전 세션 퀴즈 풀 고갈 방지)
+      migrate: () => ({}),   // 이전 버전 상태 전체 폐기 → initialState 사용
       storage: createJSONStorage(() =>
         typeof window !== 'undefined'
           ? window.localStorage
@@ -195,6 +197,9 @@ export const useGameStore = create<GameState>()(
           phase: _21,   // ← 새로고침마다 항상 title부터 시작
           setGuidance: _22, guidance: _23,   // 런타임 안내 메시지 — 새로고침마다 초기화
           setTargetNodeId: _24, targetNodeId: _25,   // 런타임 강조 노드 — 새로고침마다 초기화
+          airportQuizAttemptedIds: _26,   // 새로고침마다 풀 초기화 (이전 세션 누적 방지)
+          airportQuizFirstCorrect: _27,
+          airportQuizTotalAttempts: _28,
           ...persistable } = state;
         return persistable;
       },

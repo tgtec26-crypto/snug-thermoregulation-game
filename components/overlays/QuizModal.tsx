@@ -21,6 +21,14 @@ export function QuizModal() {
   const [firstAttemptForThisAirport, setFirstAttemptForThisAirport] = useState(true);
   const [poolReady, setPoolReady] = useState(false);
 
+  // advance: 다음 phase로 진행. early return 이전에 선언해야 TDZ 회피 (useEffect 클로저 캡처).
+  const advance = () => {
+    showToast('비행기표를 받았어요! 비행기를 타고 출발해요.');
+    if (phase === 'airport_start') setPhase('worldmap_to_1');
+    else if (phase === 'airport_1') setPhase('worldmap_to_2');
+    else if (phase === 'airport_2') setPhase('worldmap_to_home');
+  };
+
   // admin에서 편집된 quiz-pool.json을 한 번 로드 (fetch 실패 시 빌트인 풀 그대로)
   useEffect(() => {
     loadQuizPool().finally(() => setPoolReady(true));
@@ -73,13 +81,6 @@ export function QuizModal() {
         }
       }, 1800);
     }
-  };
-
-  const advance = () => {
-    showToast('비행기표를 받았어요! 비행기를 타고 출발해요.');
-    if (phase === 'airport_start') setPhase('worldmap_to_1');
-    else if (phase === 'airport_1') setPhase('worldmap_to_2');
-    else if (phase === 'airport_2') setPhase('worldmap_to_home');
   };
 
   return (

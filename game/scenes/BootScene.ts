@@ -68,10 +68,12 @@ export class BootScene extends Phaser.Scene {
         if (!tex || tex.frameTotal <= 1) return;   // placeholder(단일 프레임)는 스킵
         const animKey = `anim_${texKey}`;
         if (this.anims.exists(animKey)) return;
+        // 위/아래 15fps, 좌/우 18fps — 좌우 보폭 차이로 미끄러짐 보정
+        const fps = dir === 'left' || dir === 'right' ? 18 : 15;
         this.anims.create({
           key: animKey,
           frames: this.anims.generateFrameNumbers(texKey, { start: 0, end: 4 }),
-          frameRate: 8,
+          frameRate: fps,
           repeat: -1,
         });
       });

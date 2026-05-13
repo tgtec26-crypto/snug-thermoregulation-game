@@ -33,6 +33,15 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
   const [combo, setCombo] = useState(0);
   const [shiverPops, setShiverPops] = useState(0);
   const [feedback, setFeedback] = useState<{ text: string; key: number; lane: number } | null>(null);
+  const [comboFeedback, setComboFeedback] = useState<{ text: string; key: number } | null>(null);
+  const [flash, setFlash] = useState<{ lane: number; perfect: boolean; key: number } | null>(null);
+  const [temp, setTemp] = useState(36.5);
+  const tempRef = useRef(36.5);
+  // 체온 자동 하강 (추운 지역) — 0.1℃/sec. 정상 35.5~37.5, 한계 33~40.
+  const updateTemp = useCallback((delta: number) => {
+    tempRef.current = Math.max(33, Math.min(40, tempRef.current + delta));
+    setTemp(tempRef.current);
+  }, []);
   const [songTime, setSongTime] = useState(0);
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -73,10 +82,12 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
     synthRef.current = synth;
 
     // 멜로디 예약 (Tone.Transport 대신 직접 setTimeout 스케줄링 — 단순함)
-    const t0 = performance.now() / 1000;
+    // lead-in: 첫 노트가 화면 맨 위에서 hit-zone까지 떨어지는 시간만큼 시작 시각을 미래로 밀어 둠
+    const nowSec = performance.now() / 1000;
+    const t0 = nowSec + FALL_DURATION_SEC;
     startedAtRef.current = t0;
     TWINKLE_CHART.forEach(n => {
-      const delayMs = beatsToSeconds(n.t) * 1000;
+      const delayMs = (beatsToSeconds(n.t) + FALL_DURATION_SEC) * 1000;
       setTimeout(() => {
         if (synthRef.current && !finishedRef.current) {
           synthRef.current.triggerAttackRelease(n.pitch, beatsToSeconds(n.dur));
@@ -86,6 +97,13 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
 
     setStarted(true);
   }, [started]);
+
+  // 체온 자동 하강 — 추운 지역이므로 시간 흐를수록 떨어짐
+  useEffect(() => {
+    if (!started || finished) return;
+    const id = setInterval(() => updateTemp(-0.03), 200);  // -0.15℃/sec
+    return () => clearInterval(id);
+  }, [started, finished, updateTemp]);
 
   // 게임 루프 (requestAnimationFrame)
   useEffect(() => {
@@ -105,6 +123,7 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
           missesRef.current += 1;
           comboRef.current = 0;
           setCombo(0);
+          setFeedback({ text: '아우 추워...', key: Date.now() + Math.random(), lane: note.lane });
           onMiss();
         }
       }
@@ -178,12 +197,19 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
     setNotes([...notesRef.current]);
 
     const isPerfect = bestDelta <= PERFECT_WINDOW_SEC;
-    setFeedback({ text: isPerfect ? 'PERFECT' : 'GOOD', key: Date.now(), lane });
+    // 명중 텍스트는 '혈관 수축' ↔ '근육 떨림' 번갈아 표시 (hitsRef 홀짝)
+    const hitText = hitsRef.current % 2 === 1 ? '혈관 수축' : '근육 떨림';
+    setFeedback({ text: hitText, key: Date.now(), lane });
+    setFlash({ lane, perfect: isPerfect, key: Date.now() });
+    // 노트 명중 → 체온 회복 (perfect 더 큼)
+    updateTemp(isPerfect ? 0.10 : 0.05);
 
     if (comboRef.current > 0 && comboRef.current % COMBO_FOR_SHIVER === 0) {
       shiverPopsRef.current += 1;
       setShiverPops(shiverPopsRef.current);
       onShiverSuccess();
+      // 콤보 이벤트는 별도 피드백으로 출력
+      setComboFeedback({ text: `🥶 떨림 콤보 +${shiverPopsRef.current}!`, key: Date.now() });
     }
   };
 
@@ -193,6 +219,13 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
     const id = setTimeout(() => setFeedback(null), 600);
     return () => clearTimeout(id);
   }, [feedback]);
+
+  // 콤보 피드백 자동 fade (조금 더 길게 유지)
+  useEffect(() => {
+    if (!comboFeedback) return;
+    const id = setTimeout(() => setComboFeedback(null), 1000);
+    return () => clearTimeout(id);
+  }, [comboFeedback]);
 
   // 언마운트 정리
   useEffect(() => {
@@ -248,17 +281,18 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
           <div className="flex flex-col items-end">
             <span className="text-xs text-slate-300">진행</span>
             <span className="text-xl font-bold text-emerald-300">
-              {Math.min(100, Math.floor((songTime / SONG_DURATION_SEC) * 100))}%
+              {Math.max(0, Math.min(100, Math.floor((songTime / SONG_DURATION_SEC) * 100)))}%
             </span>
           </div>
         </div>
 
-        {/* 4 lane 영역 */}
+        {/* 4 lane 영역 + 체온 바 */}
+        <div style={{ display: 'flex', gap: 8, width: '100%', height: 480 }}>
         <div
           className="relative"
           style={{
-            width: '100%',
-            height: 480,
+            flex: 1,
+            height: '100%',
             background: 'linear-gradient(180deg, rgba(2,6,23,0.9) 0%, rgba(15,23,42,0.95) 100%)',
             border: '3px solid #334155',
             borderRadius: 4,
@@ -328,6 +362,62 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
             );
           })}
 
+          {/* 히트 플래시 — 레인 세로줄 + hit-zone 링 */}
+          {flash && (
+            <div key={`flash-${flash.key}`} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+              {/* 레인 세로 그라데이션 플래시 */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${flash.lane * (100 / LANE_COUNT)}%`,
+                  top: 0,
+                  bottom: 0,
+                  width: `${100 / LANE_COUNT}%`,
+                  background: `linear-gradient(180deg, ${flash.perfect ? 'rgba(253,224,71,0)' : 'rgba(134,239,172,0)'} 0%, ${flash.perfect ? 'rgba(253,224,71,0.55)' : 'rgba(134,239,172,0.45)'} 100%)`,
+                  animation: 'rhythm-hit-flash 0.35s ease-out forwards',
+                }}
+              />
+              {/* hit-zone 위 원형 링 */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${(flash.lane + 0.5) * (100 / LANE_COUNT)}%`,
+                  bottom: 24,
+                  width: 72,
+                  height: 72,
+                  marginLeft: -36,
+                  border: `4px solid ${flash.perfect ? '#fde047' : '#86efac'}`,
+                  borderRadius: '50%',
+                  boxShadow: `0 0 24px ${flash.perfect ? '#fde047' : '#86efac'}`,
+                  animation: 'rhythm-hit-ring 0.45s ease-out forwards',
+                }}
+              />
+            </div>
+          )}
+
+          {/* 콤보 이벤트 — 레인 영역 상단 중앙, 별도 색상 */}
+          {comboFeedback && (
+            <div
+              key={`combo-${comboFeedback.key}`}
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: 16,
+                transform: 'translateX(-50%)',
+                color: '#22d3ee',
+                fontFamily: 'monospace',
+                fontWeight: 900,
+                fontSize: 32,
+                textShadow: '2px 2px 0 #000, 0 0 16px currentColor',
+                animation: 'rhythm-combo-pop 1s ease-out forwards',
+                pointerEvents: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {comboFeedback.text}
+            </div>
+          )}
+
           {/* 피드백 텍스트 */}
           {feedback && (
             <div
@@ -338,11 +428,13 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
                 bottom: 60,
                 transform: 'translateX(-50%)',
                 color:
-                  feedback.text === 'PERFECT' ? '#fde047' :
-                  feedback.text === 'GOOD' ? '#86efac' : '#f87171',
+                  feedback.text === '근육 떨림' ? '#f472b6' :     // 분홍 — 명중 (혈관 수축과 동일)
+                  feedback.text === '혈관 수축' ? '#f472b6' :     // 분홍 — 명중
+                  feedback.text === '아우 추워...' ? '#60a5fa' :  // 파랑 — 미스
+                  '#fff',
                 fontFamily: 'monospace',
                 fontWeight: 900,
-                fontSize: feedback.text === '아우 추워...' ? 20 : 28,
+                fontSize: feedback.text === '아우 추워...' ? 22 : 28,
                 textShadow: '2px 2px 0 #000, 0 0 12px currentColor',
                 animation: 'rhythm-feedback 0.6s ease-out forwards',
                 pointerEvents: 'none',
@@ -354,8 +446,76 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
           )}
         </div>
 
-        {/* 키 라벨 */}
-        <div className="flex mt-2" style={{ height: 48 }}>
+        {/* 체온 컬러 바 (오른쪽) */}
+        <div
+          style={{
+            position: 'relative',
+            width: 56,
+            height: '100%',
+            border: '3px solid #334155',
+            borderRadius: 4,
+            overflow: 'hidden',
+            background: 'linear-gradient(180deg, #dc2626 0%, #f97316 18%, #fbbf24 30%, #10b981 38%, #10b981 62%, #06b6d4 70%, #3b82f6 82%, #1e3a8a 100%)',
+          }}
+        >
+          {/* 정상 체온 구간 (35.5~37.5℃) — 점선 박스 */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: `${((40 - 37.5) / 7) * 100}%`,
+              height: `${(2 / 7) * 100}%`,
+              border: '2px dashed rgba(255,255,255,0.85)',
+              borderLeft: 'none',
+              borderRight: 'none',
+              boxSizing: 'border-box',
+              pointerEvents: 'none',
+            }}
+          />
+          {/* 눈금 라벨 */}
+          <div style={{ position: 'absolute', top: 2, right: 4, color: '#fff', fontSize: 10, fontFamily: 'monospace', textShadow: '1px 1px 0 #000' }}>40</div>
+          <div style={{ position: 'absolute', top: `${((40 - 37.5) / 7) * 100}%`, right: 4, color: '#fff', fontSize: 10, fontFamily: 'monospace', transform: 'translateY(-50%)', textShadow: '1px 1px 0 #000' }}>37.5</div>
+          <div style={{ position: 'absolute', top: `${((40 - 35.5) / 7) * 100}%`, right: 4, color: '#fff', fontSize: 10, fontFamily: 'monospace', transform: 'translateY(-50%)', textShadow: '1px 1px 0 #000' }}>35.5</div>
+          <div style={{ position: 'absolute', bottom: 2, right: 4, color: '#fff', fontSize: 10, fontFamily: 'monospace', textShadow: '1px 1px 0 #000' }}>33</div>
+          {/* 현재 체온 마커 (◀) */}
+          <div
+            style={{
+              position: 'absolute',
+              left: -8,
+              right: -8,
+              bottom: `calc(${((temp - 33) / 7) * 100}% - 3px)`,
+              height: 6,
+              background: '#fff',
+              boxShadow: '0 0 10px #fff, 0 0 4px #000',
+              pointerEvents: 'none',
+              transition: 'bottom 120ms linear',
+            }}
+          />
+          {/* 현재 온도 텍스트 */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              bottom: `calc(${((temp - 33) / 7) * 100}% + 6px)`,
+              color: '#fff',
+              fontSize: 12,
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              textShadow: '1px 1px 0 #000, 0 0 4px #000',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              transition: 'bottom 120ms linear',
+            }}
+          >
+            {temp.toFixed(1)}℃
+          </div>
+        </div>
+        </div>
+
+        {/* 키 라벨 — 레인 영역에만 맞추기 (오른쪽 체온바 56px + gap 8px 제외) */}
+        <div className="flex mt-2" style={{ height: 48, paddingRight: 64 }}>
           {LANE_KEYS.map((k, i) => (
             <div
               key={k}
@@ -407,6 +567,21 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
           0% { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.8); }
           20% { opacity: 1; transform: translateX(-50%) translateY(-10px) scale(1.1); }
           100% { opacity: 0; transform: translateX(-50%) translateY(-40px) scale(1); }
+        }
+        @keyframes rhythm-hit-flash {
+          0%   { opacity: 0; }
+          15%  { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes rhythm-combo-pop {
+          0%   { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.7); }
+          15%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.2); }
+          30%  { transform: translateX(-50%) translateY(-4px) scale(1.05); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-32px) scale(1); }
+        }
+        @keyframes rhythm-hit-ring {
+          0%   { opacity: 0.9; transform: scale(0.6); }
+          100% { opacity: 0;   transform: scale(2.4); }
         }
       `}</style>
     </div>
