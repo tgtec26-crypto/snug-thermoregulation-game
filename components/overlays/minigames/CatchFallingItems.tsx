@@ -12,14 +12,14 @@ import type { MinigameResult } from '../MinigameModal';
  * 작은 공을 쏘면 소멸하며 티어1 아이템(±1) 드롭.
  * 떨어지는 아이템을 받으면 점수 변화.
  *
- * 티어1: 💧🍉🧊 = +1 / ☀️🔥🌶️ = -1
- * 티어2: 혈관 확장·땀 분비·티록신↓ = +2 / 혈관 수축·근육 떨림·티록신↑ = -2
+ * 티어1: 냉수·수박·얼음 = +1 / 태양·불·고추 = -1
+ * 티어2: 혈관 확장·땀 분비·티록신 감소 = +2 / 혈관 수축·근육 떨림·티록신 증가 = -2
  *
  * 공에 닿으면 0.5초 정지 + 떨림 + 붉은 실루엣 (실패 없음, 약한 페널티).
  */
 
-const GAME_DURATION_SEC = 30;
-const SUCCESS_SCORE = 12;
+const GAME_DURATION_SEC = 60;
+const SUCCESS_SCORE = 8;
 const FIELD_W = 760;
 const FIELD_H = 480;
 
@@ -33,7 +33,8 @@ const LARGE_R = 28;
 const SMALL_R = 18;
 const GRAVITY = 540;
 const LARGE_SPAWN_MS = 4500;
-const MAX_LARGE_BALLS = 3;
+// 공 누적 가중치: 큰 공=2, 작은 공=1. 합이 이 값 이상이면 큰 공 신규 스폰 중단.
+const MAX_BALL_WEIGHT = 4;
 // 바닥에서 튕길 때 위로 솟는 초기 속도. 최고점 = V²/(2g)
 // FIELD_H=480, g=540 기준 → 큰 공 80%(384px) ≈ 644, 작은 공 50%(240px) ≈ 509
 const LARGE_BOUNCE_VY = 644;
@@ -45,23 +46,25 @@ const BULLET_H = 18;
 const BULLET_SPEED = 760;
 const BULLET_COOLDOWN_MS = 360;
 
-// 아이템
-const ITEM_SIZE = 40;
+// 아이템 (스프라이트 캡션 포함 → 세로가 더 김)
+const ITEM_W = 56;
+const ITEM_H = 80;
 const ITEM_FALL = 230;
 
 // 타격
 const HIT_FREEZE_MS = 500;
 const HIT_INVULN_MS = 900;
 
-// 아이템 풀
-const T1_GOOD = ['💧', '🍉', '🧊'] as const;
-const T1_BAD = ['☀️', '🔥', '🌶️'] as const;
-const T2_GOOD = ['혈관 확장', '땀 분비', '티록신↓'] as const;
-const T2_BAD = ['혈관 수축', '근육 떨림', '티록신↑'] as const;
+// 아이템 풀 — 스프라이트 시트에서 추출한 개별 PNG (캡션 포함)
+const ITEMS_DIR = '/assets/sprites/items';
+const T1_GOOD = [`${ITEMS_DIR}/cold_water.png`, `${ITEMS_DIR}/watermelon.png`, `${ITEMS_DIR}/ice.png`] as const;
+const T1_BAD = [`${ITEMS_DIR}/sun.png`, `${ITEMS_DIR}/fire.png`, `${ITEMS_DIR}/pepper.png`] as const;
+const T2_GOOD = [`${ITEMS_DIR}/vessel_dilate.png`, `${ITEMS_DIR}/sweat.png`, `${ITEMS_DIR}/thyroxine_down.png`] as const;
+const T2_BAD = [`${ITEMS_DIR}/vessel_constrict.png`, `${ITEMS_DIR}/muscle_shiver.png`, `${ITEMS_DIR}/thyroxine_up.png`] as const;
 
 interface Ball { id: number; x: number; y: number; vx: number; vy: number; size: 'L' | 'S'; }
 interface Bullet { id: number; x: number; y: number; }
-interface ItemDrop { id: number; x: number; y: number; label: string; delta: number; tier: 1 | 2; }
+interface ItemDrop { id: number; x: number; y: number; src: string; delta: number; tier: 1 | 2; }
 interface Splash { id: number; x: number; y: number; r: number; t0: number; }
 
 interface Props { onFinish: (result: MinigameResult) => void; }
@@ -75,6 +78,8 @@ export function CatchFallingItems({ onFinish }: Props) {
   const scoreRef = useRef(0);
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION_SEC);
   const timeLeftRef = useRef(GAME_DURATION_SEC);
+  const [timeUp, setTimeUp] = useState(false);
+  const timeUpRef = useRef(false);
 
   const playerXRef = useRef(FIELD_W / 2);
   const playerDirRef = useRef<'L' | 'R'>('R');
@@ -156,7 +161,9 @@ export function CatchFallingItems({ onFinish }: Props) {
       setTimeLeft(timeLeftRef.current);
       if (timeLeftRef.current <= 0) {
         clearInterval(id);
-        finish();
+        timeUpRef.current = true;
+        setTimeUp(true);
+        // 시간 종료 즉시 끝내지 않고, 남아있는 공이 모두 제거되면 종료 (게임 루프에서 처리)
       }
     }, 1000);
     return () => clearInterval(id);
@@ -203,9 +210,11 @@ export function CatchFallingItems({ onFinish }: Props) {
 
   // 큰 공 spawn
   useEffect(() => {
-    if (!started || finished) return;
+    if (!started || finished || timeUp) return;
     const spawn = () => {
-      if (ballsRef.current.filter(b => b.size === 'L').length >= MAX_LARGE_BALLS) return;
+      if (timeUpRef.current) return;
+      const weight = ballsRef.current.reduce((w, b) => w + (b.size === 'L' ? 2 : 1), 0);
+      if (weight >= MAX_BALL_WEIGHT) return;
       const fromLeft = Math.random() < 0.5;
       ballsRef.current = [
         ...ballsRef.current,
@@ -222,7 +231,7 @@ export function CatchFallingItems({ onFinish }: Props) {
     spawn();
     const id = setInterval(spawn, LARGE_SPAWN_MS);
     return () => clearInterval(id);
-  }, [started, finished]);
+  }, [started, finished, timeUp]);
 
   // 게임 루프
   useEffect(() => {
@@ -297,16 +306,16 @@ export function CatchFallingItems({ onFinish }: Props) {
           const pool = isGood ? T2_GOOD : T2_BAD;
           newItems.push({
             id: nextId(), x: b.x, y: b.y,
-            label: pool[Math.floor(Math.random() * pool.length)],
-            delta: isGood ? 2 : -2, tier: 2,
+            src: pool[Math.floor(Math.random() * pool.length)],
+            delta: isGood ? 2 : 0, tier: 2,
           });
         } else {
           const isGood = Math.random() < 0.55;
           const pool = isGood ? T1_GOOD : T1_BAD;
           newItems.push({
             id: nextId(), x: b.x, y: b.y,
-            label: pool[Math.floor(Math.random() * pool.length)],
-            delta: isGood ? 1 : -1, tier: 1,
+            src: pool[Math.floor(Math.random() * pool.length)],
+            delta: isGood ? 1 : 0, tier: 1,
           });
         }
       }
@@ -321,14 +330,14 @@ export function CatchFallingItems({ onFinish }: Props) {
       let popped: { delta: number; tier: 1 | 2; x: number; y: number } | null = null;
       for (const it of [...itemsRef.current, ...newItems]) {
         const ny = it.y + ITEM_FALL * dt;
-        if (ny > playerTop && Math.abs(it.x - playerXRef.current) < PLAYER_W / 2 + ITEM_SIZE / 2 - 6) {
+        if (ny > playerTop && Math.abs(it.x - playerXRef.current) < PLAYER_W / 2 + ITEM_W / 2 - 6) {
           scoreRef.current = Math.max(0, scoreRef.current + it.delta);
           setScore(scoreRef.current);
           adjustTemp(-0.08 * it.delta);
-          popped = { delta: it.delta, tier: it.tier, x: it.x, y: ny };
+          popped = { delta: it.delta, tier: it.tier, x: it.x, y: ny - 36 };
           continue;
         }
-        if (ny > FIELD_H + ITEM_SIZE) continue;
+        if (ny > FIELD_H + ITEM_H) continue;
         itemsAlive.push({ ...it, y: ny });
       }
       itemsRef.current = itemsAlive;
@@ -340,7 +349,7 @@ export function CatchFallingItems({ onFinish }: Props) {
           text: (popped.delta > 0 ? '+' : '') + popped.delta,
           good: popped.delta > 0,
         });
-        setTimeout(() => setPopText(null), 600);
+        setTimeout(() => setPopText(null), 1500);
       }
 
       // splash decay (200ms)
@@ -364,6 +373,11 @@ export function CatchFallingItems({ onFinish }: Props) {
         }
       }
 
+      // 시간 종료 후 남은 공이 모두 사라지면 종료
+      if (timeUpRef.current && ballsRef.current.length === 0 && !finishedRef.current) {
+        finish();
+      }
+
       if (!finishedRef.current) {
         rafRef.current = requestAnimationFrame(loop);
       }
@@ -372,7 +386,7 @@ export function CatchFallingItems({ onFinish }: Props) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [started, finished, adjustTemp]);
+  }, [started, finished, adjustTemp, finish]);
 
   // 사막 자동 체온 상승
   useEffect(() => {
@@ -421,8 +435,8 @@ export function CatchFallingItems({ onFinish }: Props) {
           }}
         >
           {/* 모래시계 (게임 필드 안 우상단) */}
-          <div className="absolute top-3 right-3 z-10 flex flex-col items-center bg-black/55 rounded-lg px-3 py-2 pointer-events-none">
-            <svg width="60" height="90" viewBox="0 0 70 100">
+          <div className="absolute top-3 right-3 z-10 flex flex-row items-start gap-2 bg-black/55 rounded-lg px-3 py-2 pointer-events-none">
+            <svg width="48" height="72" viewBox="0 0 70 100">
               <rect x="0" y="0" width="70" height="6" fill="#8b6914" rx="2"/>
               <rect x="0" y="94" width="70" height="6" fill="#8b6914" rx="2"/>
               <defs>
@@ -441,7 +455,10 @@ export function CatchFallingItems({ onFinish }: Props) {
                 <rect x="34" y="50" width="2" height="6" fill="#fbbf24"/>
               )}
             </svg>
-            <div className="text-2xl font-bold text-yellow-200 mt-1">{timeLeft}s</div>
+            <div className="flex flex-col items-center justify-start leading-none">
+              <div className="text-2xl font-bold text-yellow-200">{timeLeft}</div>
+              <div className="text-2xl font-bold text-white mt-1">{score}</div>
+            </div>
           </div>
 
           {/* 공 */}
@@ -481,38 +498,28 @@ export function CatchFallingItems({ onFinish }: Props) {
             />
           ))}
 
-          {/* 떨어지는 아이템 */}
+          {/* 떨어지는 아이템 — 스프라이트 PNG (캡션 포함) */}
           {items.map(it => (
-            <div
+            <img
               key={it.id}
+              src={it.src}
+              alt=""
+              draggable={false}
               style={{
                 position: 'absolute',
-                left: it.x - ITEM_SIZE / 2,
-                top: it.y - ITEM_SIZE / 2,
-                width: ITEM_SIZE,
-                minHeight: ITEM_SIZE,
-                padding: it.tier === 2 ? '4px 8px' : 0,
-                fontSize: it.tier === 2 ? 12 : ITEM_SIZE - 6,
-                fontWeight: it.tier === 2 ? 700 : 400,
-                color: it.tier === 2 ? '#fff' : undefined,
-                background: it.tier === 2
-                  ? (it.delta > 0
-                      ? 'linear-gradient(180deg, #06b6d4 0%, #0e7490 100%)'
-                      : 'linear-gradient(180deg, #f43f5e 0%, #9f1239 100%)')
-                  : 'transparent',
-                border: it.tier === 2 ? '2px solid #fff' : 'none',
-                borderRadius: it.tier === 2 ? 8 : 0,
-                textAlign: 'center',
-                lineHeight: it.tier === 2 ? '1.2' : `${ITEM_SIZE}px`,
-                boxShadow: it.tier === 2 ? '0 3px 8px rgba(0,0,0,0.4)' : undefined,
-                whiteSpace: it.tier === 2 ? 'nowrap' : undefined,
-                wordBreak: 'keep-all',
+                left: it.x - ITEM_W / 2,
+                top: it.y - ITEM_H / 2,
+                width: ITEM_W,
+                height: ITEM_H,
+                objectFit: 'contain',
+                imageRendering: 'pixelated',
+                filter: it.tier === 2
+                  ? `drop-shadow(0 0 3px ${it.delta > 0 ? '#06b6d4' : '#f43f5e'}) drop-shadow(0 2px 4px rgba(0,0,0,0.5))`
+                  : 'drop-shadow(0 2px 3px rgba(0,0,0,0.4))',
                 pointerEvents: 'none',
                 userSelect: 'none',
               }}
-            >
-              {it.label}
-            </div>
+            />
           ))}
 
           {/* 공 쪼개짐 스플래시 */}
@@ -537,12 +544,12 @@ export function CatchFallingItems({ onFinish }: Props) {
               key={popText.id}
               style={{
                 position: 'absolute',
-                left: popText.x - 20, top: popText.y,
-                width: 40, textAlign: 'center',
-                fontWeight: 900, fontSize: 22,
+                left: popText.x - 30, top: popText.y,
+                width: 60, textAlign: 'center',
+                fontWeight: 900, fontSize: 33,
                 color: popText.good ? '#22c55e' : '#ef4444',
                 textShadow: '0 0 4px #fff, 0 0 4px #fff',
-                animation: 'pop-up 0.6s ease-out forwards',
+                animation: 'pop-up 1.5s ease-out forwards',
                 pointerEvents: 'none',
               }}
             >
