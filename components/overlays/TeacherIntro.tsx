@@ -12,7 +12,7 @@ import {
 
 type Phase = ReturnType<typeof useGameStore.getState>['phase'];
 
-const FRIEND_NAME = '김원영';
+const FRIEND_NAME = '김한결';
 
 // phase별 기본 라인 (JSON 로드 실패/누락 시 fallback)
 const FALLBACK: Partial<Record<Phase, string[]>> = {
@@ -24,7 +24,7 @@ const FALLBACK: Partial<Record<Phase, string[]>> = {
   ],
   classroom_rps_cold_intro: [
     '우리반에서 핀란드의 라플란드를 가고 싶은 친구와 캐나다의 옐로나이프를 가고 싶은 친구가 딱 반반이에요.',
-    '각 여행지를 선택한 학생의 대표로 {playerName}{와과} 김원영이 서로 가위바위보로 결정해볼게요.',
+    '각 여행지를 선택한 학생의 대표로 {playerName}{와과} 김한결이 서로 가위바위보로 결정해볼게요.',
   ],
   classroom_rps_cold_result: [
     '{winnerName}{이가} 이겼으므로 이번 추운 나라 수학 여행지는 {winnerCountry}입니다.',

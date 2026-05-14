@@ -101,6 +101,29 @@ export default function AdminPage() {
   const [quizPool, setQuizPool]           = useState<QuizQuestion[] | null>(null);
   const [quizSaved, setQuizSaved]         = useState(false);
 
+  // ── 사우나 두더지 구멍 편집 상태 ──
+  type SaunaHoles = {
+    imageSize: { w: number; h: number };
+    cellSize: { w: number; h: number };
+    holes: { x: number; y: number }[];
+  };
+  const [moleHoles, setMoleHoles]   = useState<SaunaHoles | null>(null);
+  const [moleDrag, setMoleDrag]     = useState<number | null>(null);
+  const [moleSaved, setMoleSaved]   = useState(false);
+  const moleWrapRef                 = useRef<HTMLDivElement>(null);
+
+  // ── 다른 그림 찾기 정답 영역 편집 상태 ──
+  type DiffPoint = { x: number; y: number };
+  type DiffTarget = { id: string; label: string; r: number; left: DiffPoint; right: DiffPoint };
+  type DiffTargets = {
+    imageSize: { w: number; h: number };
+    targets: DiffTarget[];
+  };
+  const [diffData, setDiffData]   = useState<DiffTargets | null>(null);
+  const [diffDrag, setDiffDrag]   = useState<{ i: number; side: 'left' | 'right' } | null>(null);
+  const [diffSaved, setDiffSaved] = useState(false);
+  const diffWrapRef               = useRef<HTMLDivElement>(null);
+
   // 경로 데이터 로드
   useEffect(() => {
     fetch('/data/paths-worldmap.json').then(r => r.json()).then(setWorldmapPaths);
@@ -114,6 +137,14 @@ export default function AdminPage() {
       .then((d: unknown) => {
         if (Array.isArray(d)) setQuizPool(d as QuizQuestion[]);
       })
+      .catch(() => { /* ignore */ });
+    fetch(`/data/sauna-mole-holes.json?t=${Date.now()}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: SaunaHoles | null) => { if (d) setMoleHoles(d); })
+      .catch(() => { /* ignore */ });
+    fetch(`/data/spot-difference-targets.json?t=${Date.now()}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: DiffTargets | null) => { if (d) setDiffData(d); })
       .catch(() => { /* ignore */ });
   }, []);
 
@@ -248,6 +279,63 @@ export default function AdminPage() {
     });
     if (r.ok) { setQuizSaved(true); setTimeout(() => setQuizSaved(false), 1500); }
     else alert('저장 실패 (공항 퀴즈): ' + await r.text());
+  };
+
+  // ── 사우나 두더지 구멍 편집 핸들러 ──
+  const onMoleMouseMove = (e: React.MouseEvent) => {
+    if (moleDrag === null || !moleWrapRef.current || !moleHoles) return;
+    const rect = moleWrapRef.current.getBoundingClientRect();
+    const x = Math.round((e.clientX - rect.left) * (moleHoles.imageSize.w / rect.width));
+    const y = Math.round((e.clientY - rect.top)  * (moleHoles.imageSize.h / rect.height));
+    setMoleHoles({
+      ...moleHoles,
+      holes: moleHoles.holes.map((h, i) => i === moleDrag ? { x, y } : h),
+    });
+  };
+  const updateMoleCell = (axis: 'w' | 'h', value: number) => {
+    if (!moleHoles) return;
+    setMoleHoles({ ...moleHoles, cellSize: { ...moleHoles.cellSize, [axis]: value } });
+  };
+  const saveMoleHoles = async () => {
+    if (!moleHoles) return;
+    const r = await fetch('/api/sauna-mole-holes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: moleHoles }),
+    });
+    if (r.ok) { setMoleSaved(true); setTimeout(() => setMoleSaved(false), 1500); }
+    else alert('저장 실패 (사우나 두더지): ' + await r.text());
+  };
+
+  // ── 다른 그림 찾기 정답 영역 핸들러 ──
+  const onDiffMouseMove = (e: React.MouseEvent) => {
+    if (diffDrag === null || !diffWrapRef.current || !diffData) return;
+    const rect = diffWrapRef.current.getBoundingClientRect();
+    const x = Math.round((e.clientX - rect.left) * (diffData.imageSize.w / rect.width));
+    const y = Math.round((e.clientY - rect.top)  * (diffData.imageSize.h / rect.height));
+    setDiffData({
+      ...diffData,
+      targets: diffData.targets.map((t, i) =>
+        i === diffDrag.i ? { ...t, [diffDrag.side]: { x, y } } : t
+      ),
+    });
+  };
+  const updateDiffField = <K extends keyof DiffTarget>(i: number, field: K, value: DiffTarget[K]) => {
+    if (!diffData) return;
+    setDiffData({
+      ...diffData,
+      targets: diffData.targets.map((t, j) => j === i ? { ...t, [field]: value } : t),
+    });
+  };
+  const saveDiffTargets = async () => {
+    if (!diffData) return;
+    const r = await fetch('/api/spot-difference-targets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: diffData }),
+    });
+    if (r.ok) { setDiffSaved(true); setTimeout(() => setDiffSaved(false), 1500); }
+    else alert('저장 실패 (다른 그림 찾기): ' + await r.text());
   };
 
   const saveTeacherLines = async () => {
@@ -872,6 +960,228 @@ export default function AdminPage() {
             </div>
           );
         })()}
+      </section>
+
+      {/* ── 사우나 두더지 구멍 위치 편집 ────────────────────────────────── */}
+      <section className="border-t border-slate-700 pt-4 mt-4 flex flex-col gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-lg font-bold">🐹 사우나 두더지 — 구멍 위치</h2>
+          <span className="text-xs text-slate-400">배경 위의 6개 핸들을 드래그해 구멍 위치를 맞추세요. 셀 크기는 두더지가 솟구치는 영역.</span>
+          {moleHoles && (
+            <>
+              <label className="text-xs text-slate-300 flex items-center gap-1">
+                셀 W
+                <input
+                  type="number"
+                  value={moleHoles.cellSize.w}
+                  onChange={e => updateMoleCell('w', Math.max(20, parseInt(e.target.value, 10) || 0))}
+                  className="w-20 bg-slate-700 border border-slate-600 rounded px-2 py-0.5 text-sm"
+                />
+              </label>
+              <label className="text-xs text-slate-300 flex items-center gap-1">
+                셀 H
+                <input
+                  type="number"
+                  value={moleHoles.cellSize.h}
+                  onChange={e => updateMoleCell('h', Math.max(20, parseInt(e.target.value, 10) || 0))}
+                  className="w-20 bg-slate-700 border border-slate-600 rounded px-2 py-0.5 text-sm"
+                />
+              </label>
+            </>
+          )}
+          <button
+            onClick={saveMoleHoles}
+            disabled={!moleHoles}
+            className="bg-sky-600 hover:bg-sky-700 disabled:opacity-40 px-3 py-1 rounded ml-auto"
+          >
+            저장
+          </button>
+          {moleSaved && <span className="text-green-400">✅ 저장 완료</span>}
+        </div>
+
+        {moleHoles && (
+          <div
+            ref={moleWrapRef}
+            className="relative border border-slate-600 mx-auto select-none bg-black"
+            style={{
+              width: '100%',
+              maxWidth: 1280,
+              aspectRatio: `${moleHoles.imageSize.w} / ${moleHoles.imageSize.h}`,
+            }}
+            onMouseMove={onMoleMouseMove}
+            onMouseUp={() => setMoleDrag(null)}
+            onMouseLeave={() => setMoleDrag(null)}
+          >
+            <img
+              src="/assets/backgrounds/mole_game.png"
+              alt=""
+              className="absolute inset-0 w-full h-full object-fill pointer-events-none"
+              style={{ imageRendering: 'pixelated' }}
+              draggable={false}
+            />
+
+            {/* 셀 영역 표시 */}
+            {moleHoles.holes.map((h, i) => {
+              const leftPct = (h.x / moleHoles.imageSize.w) * 100;
+              const topPct  = (h.y / moleHoles.imageSize.h) * 100;
+              const wPct    = (moleHoles.cellSize.w / moleHoles.imageSize.w) * 100;
+              const hPct    = (moleHoles.cellSize.h / moleHoles.imageSize.h) * 100;
+              return (
+                <div
+                  key={`cell-${i}`}
+                  className="absolute border-2 border-yellow-400/70 bg-yellow-400/10 pointer-events-none rounded-sm"
+                  style={{
+                    left: `${leftPct}%`,
+                    top: `${topPct}%`,
+                    width: `${wPct}%`,
+                    height: `${hPct}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+              );
+            })}
+
+            {/* 드래그 핸들 (구멍 중심) */}
+            {moleHoles.holes.map((h, i) => {
+              const leftPct = (h.x / moleHoles.imageSize.w) * 100;
+              const topPct  = (h.y / moleHoles.imageSize.h) * 100;
+              return (
+                <div
+                  key={`handle-${i}`}
+                  onMouseDown={e => { e.preventDefault(); setMoleDrag(i); }}
+                  className="absolute w-7 h-7 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-30"
+                  style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+                  title={`구멍 ${i + 1} 드래그`}
+                >
+                  <div className="w-full h-full rounded-full bg-amber-400 border-2 border-white shadow-lg flex items-center justify-center text-xs font-bold text-slate-900">
+                    {i + 1}
+                  </div>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 text-[10px] bg-black/70 text-white px-1 rounded whitespace-nowrap pointer-events-none">
+                    ({h.x},{h.y})
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-sm text-slate-400 mx-auto">
+          🟡 노란 박스 = 두더지 솟구치는 셀 영역 / 🟠 1~6 = 구멍 중심 (드래그로 위치 이동) → 저장
+        </p>
+      </section>
+
+      {/* ── 다른 그림 찾기 정답 영역 편집 ────────────────────────────────── */}
+      <section className="border-t border-slate-700 pt-4 mt-4 flex flex-col gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-lg font-bold">🔍 다른 그림 찾기 — 정답 영역 5곳</h2>
+          <span className="text-xs text-slate-400">초록 원 핸들을 드래그해 정답 위치를 맞추세요. 반경(r)과 라벨은 옆 패널에서 편집.</span>
+          <button
+            onClick={saveDiffTargets}
+            disabled={!diffData}
+            className="bg-sky-600 hover:bg-sky-700 disabled:opacity-40 px-3 py-1 rounded ml-auto"
+          >
+            저장
+          </button>
+          {diffSaved && <span className="text-green-400">✅ 저장 완료</span>}
+        </div>
+
+        {diffData && (
+          <div className="flex gap-4 items-start flex-wrap">
+            {/* 좌: 배경 이미지 + 드래그 핸들 */}
+            <div
+              ref={diffWrapRef}
+              className="relative border border-slate-600 select-none bg-black flex-1"
+              style={{
+                minWidth: 480,
+                maxWidth: 960,
+                aspectRatio: `${diffData.imageSize.w} / ${diffData.imageSize.h}`,
+              }}
+              onMouseMove={onDiffMouseMove}
+              onMouseUp={() => setDiffDrag(null)}
+              onMouseLeave={() => setDiffDrag(null)}
+            >
+              <img
+                src="/assets/backgrounds/diff_img_game.png"
+                alt=""
+                className="absolute inset-0 w-full h-full object-fill pointer-events-none"
+                draggable={false}
+              />
+
+              {/* 정답 원 표시 + 중심 핸들 — 왼쪽·오른쪽 2개씩 */}
+              {diffData.targets.map((t, i) => {
+                const wPct = ((t.r * 2) / diffData.imageSize.w) * 100;
+                return (['left', 'right'] as const).map(side => {
+                  const p = t[side];
+                  const leftPct = (p.x / diffData.imageSize.w) * 100;
+                  const topPct  = (p.y / diffData.imageSize.h) * 100;
+                  return (
+                    <div key={`${t.id}-${side}`}>
+                      {/* 반경 원 */}
+                      <div
+                        className="absolute pointer-events-none rounded-full"
+                        style={{
+                          left: `${leftPct}%`,
+                          top: `${topPct}%`,
+                          width: `${wPct}%`,
+                          aspectRatio: '1 / 1',
+                          transform: 'translate(-50%, -50%)',
+                          border: '2px solid #22c55e',
+                          background: 'rgba(34,197,94,0.18)',
+                        }}
+                      />
+                      {/* 드래그 핸들 (중심) */}
+                      <div
+                        onMouseDown={e => { e.preventDefault(); setDiffDrag({ i, side }); }}
+                        className="absolute w-6 h-6 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-30"
+                        style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+                        title={`정답 ${i + 1} (${t.label}) — ${side === 'left' ? '왼쪽' : '오른쪽'} 드래그`}
+                      >
+                        <div className="w-full h-full rounded-full bg-emerald-400 border-2 border-white shadow-lg flex items-center justify-center text-[9px] font-bold text-slate-900">
+                          {i + 1}{side === 'left' ? 'L' : 'R'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })}
+            </div>
+
+            {/* 우: 정답별 편집 패널 */}
+            <div className="flex flex-col gap-2 min-w-[320px]">
+              {diffData.targets.map((t, i) => (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded p-2"
+                >
+                  <span className="w-7 h-7 rounded-full bg-emerald-400 text-slate-900 font-bold text-sm flex items-center justify-center shrink-0">
+                    {i + 1}
+                  </span>
+                  <input
+                    type="text"
+                    value={t.label}
+                    onChange={e => updateDiffField(i, 'label', e.target.value)}
+                    placeholder="라벨"
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
+                  />
+                  <label className="text-xs text-slate-300 flex items-center gap-1">
+                    r
+                    <input
+                      type="number"
+                      value={t.r}
+                      onChange={e => updateDiffField(i, 'r', Math.max(5, parseInt(e.target.value, 10) || 0))}
+                      className="w-16 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-sm"
+                    />
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap">
+                    L({t.left.x},{t.left.y}) R({t.right.x},{t.right.y})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <p className="text-sm text-slate-400 mx-auto">
+          🟢 초록 원 = 정답 클릭 영역 / 1L~5L = 왼쪽 그림, 1R~5R = 오른쪽 그림 (드래그) / 우측 패널에서 라벨·반경 편집
+        </p>
       </section>
     </main>
   );

@@ -18,7 +18,7 @@ const LABEL: Record<RPSChoice, string> = {
   paper: '보',
 };
 
-const FRIEND_NAME = '김원영';
+const FRIEND_NAME = '김한결';
 const CYCLE_MS = 80; // 빠르게 바뀌는 주기
 const TARGET_WINS = 2; // 3판 2선승
 
@@ -260,7 +260,7 @@ export function RPSModal() {
             })()}
           </div>
 
-          {/* 오른쪽: 친구(김원영) — 원이 이름 왼쪽에 인라인 */}
+          {/* 오른쪽: 친구(김한결) — 원이 이름 왼쪽에 인라인 */}
           <div className="flex flex-col items-center gap-3">
             <div className="flex flex-col items-center gap-1">
               <div className="flex items-center gap-2 text-white text-[28px] font-bold">

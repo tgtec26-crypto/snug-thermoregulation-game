@@ -216,14 +216,14 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
   // 피드백 텍스트 자동 fade
   useEffect(() => {
     if (!feedback) return;
-    const id = setTimeout(() => setFeedback(null), 600);
+    const id = setTimeout(() => setFeedback(null), 1300);
     return () => clearTimeout(id);
   }, [feedback]);
 
-  // 콤보 피드백 자동 fade (조금 더 길게 유지)
+  // 콤보 피드백 자동 fade
   useEffect(() => {
     if (!comboFeedback) return;
-    const id = setTimeout(() => setComboFeedback(null), 1000);
+    const id = setTimeout(() => setComboFeedback(null), 1300);
     return () => clearTimeout(id);
   }, [comboFeedback]);
 
@@ -409,7 +409,7 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
                 fontWeight: 900,
                 fontSize: 32,
                 textShadow: '2px 2px 0 #000, 0 0 16px currentColor',
-                animation: 'rhythm-combo-pop 1s ease-out forwards',
+                animation: 'rhythm-combo-pop 1.3s ease-out forwards',
                 pointerEvents: 'none',
                 whiteSpace: 'nowrap',
               }}
@@ -436,7 +436,7 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
                 fontWeight: 900,
                 fontSize: feedback.text === '아우 추워...' ? 22 : 28,
                 textShadow: '2px 2px 0 #000, 0 0 12px currentColor',
-                animation: 'rhythm-feedback 0.6s ease-out forwards',
+                animation: 'rhythm-feedback 1.3s ease-out forwards',
                 pointerEvents: 'none',
                 whiteSpace: 'nowrap',
               }}
@@ -538,8 +538,7 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
         {!started && (
           <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)' }}>
             <h2 className="text-3xl font-bold text-white mb-2 font-mono">🥶 떨림 리듬</h2>
-            <p className="text-slate-300 text-sm mb-1">1·2·3·4 키로 박자에 맞춰 노트를 쳐 떨림으로 열을 내요!</p>
-            <p className="text-cyan-300 text-xs mb-6">5번 연속 성공 → 떨림 성공! 체온 ↑</p>
+            <p className="text-slate-300 text-2xl mb-6" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>1·2·3·4 키로 박자에 맞춰 노트를 쳐 떨림으로 열을 내요!</p>
             <button
               onClick={handleStart}
               className="px-8 py-3 bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold rounded-md font-mono text-lg"

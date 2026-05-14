@@ -18,14 +18,14 @@ import type { MinigameResult } from '../MinigameModal';
  * 공에 닿으면 0.5초 정지 + 떨림 + 붉은 실루엣 (실패 없음, 약한 페널티).
  */
 
-const GAME_DURATION_SEC = 60;
+const GAME_DURATION_SEC = 40;
 const SUCCESS_SCORE = 8;
 const FIELD_W = 760;
 const FIELD_H = 480;
 
 // 플레이어
-const PLAYER_W = 64;
-const PLAYER_H = 110;
+const PLAYER_W = 51;
+const PLAYER_H = 88;
 const MOVE_SPEED = 380;
 
 // 공
@@ -307,7 +307,7 @@ export function CatchFallingItems({ onFinish }: Props) {
           newItems.push({
             id: nextId(), x: b.x, y: b.y,
             src: pool[Math.floor(Math.random() * pool.length)],
-            delta: isGood ? 2 : 0, tier: 2,
+            delta: isGood ? 2 : -1, tier: 2,
           });
         } else {
           const isGood = Math.random() < 0.55;
@@ -315,7 +315,7 @@ export function CatchFallingItems({ onFinish }: Props) {
           newItems.push({
             id: nextId(), x: b.x, y: b.y,
             src: pool[Math.floor(Math.random() * pool.length)],
-            delta: isGood ? 1 : 0, tier: 1,
+            delta: isGood ? 2 : -1, tier: 1,
           });
         }
       }
@@ -331,7 +331,7 @@ export function CatchFallingItems({ onFinish }: Props) {
       for (const it of [...itemsRef.current, ...newItems]) {
         const ny = it.y + ITEM_FALL * dt;
         if (ny > playerTop && Math.abs(it.x - playerXRef.current) < PLAYER_W / 2 + ITEM_W / 2 - 6) {
-          scoreRef.current = Math.max(0, scoreRef.current + it.delta);
+          scoreRef.current = Math.max(-99, Math.min(99, scoreRef.current + it.delta));
           setScore(scoreRef.current);
           adjustTemp(-0.08 * it.delta);
           popped = { delta: it.delta, tier: it.tier, x: it.x, y: ny - 36 };

@@ -5,34 +5,38 @@ import { useGameStore } from '@/store/gameStore';
 import type { MinigameResult } from '../MinigameModal';
 
 /**
- * 스키장(더2 실내) — 다른 그림 찾기.
- * 왼쪽: 직전 사막에서의 더위 반응 인체.
- * 오른쪽: 실내 스키장에서의 추위 반응 인체.
- * 두 그림에서 다른 부분 5가지를 찾아 클릭.
+ * 스키장(더2 실내) — 다른 그림 찾기 (풀스크린).
+ * 배경 이미지: /assets/backgrounds/diff_img_game.png — 좌/우 두 그림이 한 장에 합쳐진 형태.
+ * 정답 클릭 영역은 /data/spot-difference-targets.json 에서 동적으로 로드 (어드민 편집).
  */
 
-const PANEL_W = 320;
-const PANEL_H = 320;
+const BG_SRC = '/assets/backgrounds/diff_img_game.png';
 const TIME_LIMIT_SEC = 90;
-const DIFF_TARGET = 5;
 
-interface Diff {
+interface Point { x: number; y: number; }
+interface Target {
   id: string;
-  panel: 'left' | 'right';
-  x: number;     // 패널 내 좌표
-  y: number;
-  emoji: string;
-  fontSize: number;
-  label: string;   // 발견 후 표시 라벨
+  label: string;
+  r: number;
+  left: Point;
+  right: Point;
 }
 
-const DIFFS: Diff[] = [
-  { id: 'sweat',   panel: 'left',  x: 80,  y: 100, emoji: '💧', fontSize: 36, label: '땀' },
-  { id: 'fan',     panel: 'left',  x: 230, y: 180, emoji: '🪭', fontSize: 40, label: '부채' },
-  { id: 'shiver',  panel: 'right', x: 100, y: 150, emoji: '〰️', fontSize: 32, label: '떨림' },
-  { id: 'breath',  panel: 'right', x: 220, y: 80,  emoji: '💨', fontSize: 38, label: '입김' },
-  { id: 'gooseb',  panel: 'right', x: 150, y: 230, emoji: '🟣', fontSize: 22, label: '소름' },
-];
+interface TargetsData {
+  imageSize: { w: number; h: number };
+  targets: Target[];
+}
+
+const DEFAULT_TARGETS: TargetsData = {
+  imageSize: { w: 1376, h: 768 },
+  targets: [
+    { id: 't1', label: '차이 1', r: 40, left: { x: 200, y: 200 }, right: { x: 888, y: 200 } },
+    { id: 't2', label: '차이 2', r: 40, left: { x: 400, y: 350 }, right: { x: 1088, y: 350 } },
+    { id: 't3', label: '차이 3', r: 40, left: { x: 300, y: 500 }, right: { x: 988, y: 500 } },
+    { id: 't4', label: '차이 4', r: 40, left: { x: 500, y: 250 }, right: { x: 1188, y: 250 } },
+    { id: 't5', label: '차이 5', r: 40, left: { x: 250, y: 450 }, right: { x: 938, y: 450 } },
+  ],
+};
 
 interface Props {
   onFinish: (result: MinigameResult) => void;
@@ -40,13 +44,23 @@ interface Props {
 
 export function SpotTheDifference({ onFinish }: Props) {
   const adjustTemp = useGameStore(s => s.adjustTemp);
+  const [data, setData] = useState<TargetsData>(DEFAULT_TARGETS);
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [found, setFound] = useState<Set<string>>(new Set());
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_SEC);
-  const [wrongFlash, setWrongFlash] = useState<{ x: number; y: number; panel: 'left' | 'right'; key: number } | null>(null);
+  const [wrongFlash, setWrongFlash] = useState<{ x: number; y: number; key: number } | null>(null);
   const [wrongCount, setWrongCount] = useState(0);
   const finishedRef = useRef(false);
+
+  useEffect(() => {
+    fetch(`/data/spot-difference-targets.json?t=${Date.now()}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: TargetsData | null) => { if (d) setData(d); })
+      .catch(() => { /* default 사용 */ });
+  }, []);
+
+  const target = data.targets.length;
 
   const finish = useCallback((success: boolean) => {
     if (finishedRef.current) return;
@@ -55,21 +69,20 @@ export function SpotTheDifference({ onFinish }: Props) {
     setTimeout(() => onFinish({ success, score: found.size }), 800);
   }, [onFinish, found.size]);
 
-  // 타이머
   useEffect(() => {
     if (!started || finished) return;
     const id = setInterval(() => {
       setTimeLeft(t => {
         if (t <= 1) {
           clearInterval(id);
-          finish(found.size >= DIFF_TARGET);
+          finish(found.size >= target);
           return 0;
         }
         return t - 1;
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [started, finished, finish, found.size]);
+  }, [started, finished, finish, found.size, target]);
 
   // 추운 실내 → 체온 자동 하강 (약하게)
   useEffect(() => {
@@ -78,33 +91,11 @@ export function SpotTheDifference({ onFinish }: Props) {
     return () => clearInterval(id);
   }, [started, finished, adjustTemp]);
 
-  // 모두 찾으면 성공
   useEffect(() => {
-    if (found.size >= DIFF_TARGET && started && !finished) {
+    if (target > 0 && found.size >= target && started && !finished) {
       finish(true);
     }
-  }, [found, started, finished, finish]);
-
-  const onClickDiff = (d: Diff) => {
-    if (finished) return;
-    if (found.has(d.id)) return;
-    setFound(prev => {
-      const next = new Set(prev);
-      next.add(d.id);
-      return next;
-    });
-    adjustTemp(-0.1);   // 정답 → 체온 회복
-  };
-
-  const onPanelClick = (e: React.MouseEvent<HTMLDivElement>, panel: 'left' | 'right') => {
-    if (finished) return;
-    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    // diff 영역 클릭은 onClickDiff(이벤트 버블)로 처리됨. 빈 곳 클릭 = 오답.
-    setWrongCount(c => c + 1);
-    setWrongFlash({ x, y, panel, key: Date.now() });
-  };
+  }, [found, started, finished, finish, target]);
 
   // wrongFlash fade
   useEffect(() => {
@@ -113,185 +104,160 @@ export function SpotTheDifference({ onFinish }: Props) {
     return () => clearTimeout(id);
   }, [wrongFlash]);
 
-  // 인체 SVG (간단) — 공통 figure
-  const Figure = ({ skinColor }: { skinColor: string }) => (
-    <svg width="120" height="200" viewBox="0 0 60 100" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
-      <circle cx="30" cy="15" r="11" fill={skinColor} stroke="#444" strokeWidth="1" />
-      <rect x="22" y="26" width="16" height="30" rx="4" fill={skinColor} stroke="#444" strokeWidth="1" />
-      <line x1="22" y1="32" x2="14" y2="48" stroke={skinColor} strokeWidth="6" strokeLinecap="round" />
-      <line x1="38" y1="32" x2="46" y2="48" stroke={skinColor} strokeWidth="6" strokeLinecap="round" />
-      <line x1="26" y1="56" x2="22" y2="84" stroke={skinColor} strokeWidth="6" strokeLinecap="round" />
-      <line x1="34" y1="56" x2="38" y2="84" stroke={skinColor} strokeWidth="6" strokeLinecap="round" />
-      {/* 표정 */}
-      <circle cx="26" cy="14" r="1.2" fill="#222" />
-      <circle cx="34" cy="14" r="1.2" fill="#222" />
-    </svg>
-  );
+  const onImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!started || finished) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = ((e.clientX - rect.left) / rect.width) * data.imageSize.w;
+    const clickY = ((e.clientY - rect.top) / rect.height) * data.imageSize.h;
 
-  const renderPanel = (panel: 'left' | 'right') => {
-    const isLeft = panel === 'left';
-    const skinColor = isLeft ? '#fda4af' : '#bfdbfe';   // 더위 = 핑크 (혈관 확장), 추위 = 창백 파랑
-    const bg = isLeft
-      ? 'linear-gradient(180deg, #fef3c7 0%, #fbbf24 100%)'
-      : 'linear-gradient(180deg, #e0e7ff 0%, #93c5fd 100%)';
-    return (
+    // 한 차이점은 왼쪽·오른쪽 양쪽에 영역이 있음 — 둘 중 하나만 클릭해도 정답
+    let hit: Target | null = null;
+    for (const t of data.targets) {
+      if (found.has(t.id)) continue;
+      const dl = Math.hypot(clickX - t.left.x, clickY - t.left.y);
+      const dr = Math.hypot(clickX - t.right.x, clickY - t.right.y);
+      if (dl <= t.r || dr <= t.r) { hit = t; break; }
+    }
+
+    if (hit) {
+      setFound(prev => new Set(prev).add(hit!.id));
+      adjustTemp(-0.1);
+    } else {
+      setWrongCount(c => c + 1);
+      setWrongFlash({ x: clickX, y: clickY, key: Date.now() });
+    }
+  };
+
+  const { imageSize, targets } = data;
+
+  return (
+    <div className="fixed inset-0 z-40 bg-black flex items-center justify-center">
+      {/* 게임 영역: 배경 이미지 비율 유지 (letterbox) */}
       <div
-        onClick={(e) => onPanelClick(e, panel)}
-        className="relative overflow-hidden rounded-lg cursor-crosshair"
+        className="relative shadow-2xl select-none"
         style={{
-          width: PANEL_W,
-          height: PANEL_H,
-          background: bg,
-          border: `3px solid ${isLeft ? '#92400e' : '#1e3a8a'}`,
+          width: `min(100vw, calc(100vh * ${imageSize.w} / ${imageSize.h}))`,
+          height: `min(100vh, calc(100vw * ${imageSize.h} / ${imageSize.w}))`,
+          backgroundImage: `url(${BG_SRC})`,
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'center',
+          cursor: started && !finished ? 'crosshair' : 'default',
         }}
+        onClick={onImageClick}
       >
-        <div className="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 text-white text-xs font-bold">
-          {isLeft ? '🏜️ 더운 사막 직후' : '⛷️ 실내 스키장 안'}
+        {/* HUD */}
+        <div className="absolute top-0 left-0 right-0 flex justify-between items-start p-3 pointer-events-none text-white font-mono">
+          <div className="bg-black/55 rounded-md px-3 py-1.5">
+            <div className="text-[10px] text-cyan-200">찾은 차이</div>
+            <div className="text-2xl font-bold leading-none" style={{ color: found.size >= target ? '#fde047' : '#fff' }}>
+              {found.size} / {target}
+            </div>
+          </div>
+          <div className="bg-black/55 rounded-md px-3 py-1.5 text-right">
+            <div className="text-[10px] text-cyan-200">남은 시간</div>
+            <div className="text-2xl font-bold leading-none text-emerald-300">{timeLeft}s</div>
+          </div>
         </div>
-        <Figure skinColor={skinColor} />
 
-        {/* 패널 고유 diff 요소 */}
-        {DIFFS.filter(d => d.panel === panel).map(d => {
-          const isFound = found.has(d.id);
-          return (
-            <button
-              key={d.id}
-              onClick={(e) => { e.stopPropagation(); onClickDiff(d); }}
-              className="absolute select-none"
+        {/* 발견한 정답 위치에 초록 원 — 왼쪽·오른쪽 양쪽 표시 */}
+        {targets.map(t => {
+          if (!found.has(t.id)) return null;
+          const w = ((t.r * 2) / imageSize.w) * 100;
+          return ([t.left, t.right] as Point[]).map((p, side) => (
+            <div
+              key={`${t.id}-${side}`}
+              className="absolute pointer-events-none rounded-full"
               style={{
-                left: d.x - d.fontSize / 2,
-                top: d.y - d.fontSize / 2,
-                width: d.fontSize + 16,
-                height: d.fontSize + 16,
-                fontSize: d.fontSize,
-                lineHeight: 1,
-                background: 'transparent',
-                border: 'none',
-                cursor: isFound ? 'default' : 'pointer',
-                padding: 0,
-                color: 'inherit',
-                textAlign: 'center',
+                left: `${(p.x / imageSize.w) * 100}%`,
+                top: `${(p.y / imageSize.h) * 100}%`,
+                width: `${w}%`,
+                aspectRatio: '1 / 1',
+                transform: 'translate(-50%, -50%)',
+                border: '4px solid #ef4444',
+                boxShadow: '0 0 12px #ef4444, inset 0 0 12px rgba(239,68,68,0.3)',
               }}
-              title={isFound ? d.label : ''}
-            >
-              {d.emoji}
-              {isFound && (
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    border: '3px solid #22c55e',
-                    borderRadius: '50%',
-                    boxShadow: '0 0 12px #22c55e',
-                  }}
-                />
-              )}
-            </button>
-          );
+            />
+          ));
         })}
 
         {/* 오답 X 마크 */}
-        {wrongFlash && wrongFlash.panel === panel && (
+        {wrongFlash && (
           <div
             key={wrongFlash.key}
             className="absolute pointer-events-none font-bold"
             style={{
-              left: wrongFlash.x - 14,
-              top: wrongFlash.y - 18,
+              left: `${(wrongFlash.x / imageSize.w) * 100}%`,
+              top: `${(wrongFlash.y / imageSize.h) * 100}%`,
+              transform: 'translate(-50%, -50%)',
               color: '#dc2626',
-              fontSize: 32,
-              textShadow: '2px 2px 0 #fff, 0 0 6px #dc2626',
-              animation: 'wrong-x 0.5s ease-out forwards',
+              fontSize: 'clamp(28px, 5vh, 56px)',
+              textShadow: '2px 2px 0 #fff, 0 0 8px #dc2626',
+              animation: 'spot-wrong-x 0.5s ease-out forwards',
             }}
           >
             ✗
           </div>
         )}
-      </div>
-    );
-  };
 
-  return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-[2px] px-6">
-      <div className="relative bg-slate-900 border-4 border-cyan-300 rounded-2xl shadow-2xl" style={{ padding: 24, width: PANEL_W * 2 + 96 }}>
-        {/* HUD */}
-        <div className="flex justify-between items-center mb-3 text-white font-mono">
-          <div>
-            <div className="text-xs text-cyan-200">찾은 차이</div>
-            <div className="text-3xl font-bold" style={{ color: found.size >= DIFF_TARGET ? '#fde047' : '#fff' }}>
-              {found.size} / {DIFF_TARGET}
-            </div>
-          </div>
-          <div className="text-center text-cyan-100 font-bold text-lg">⛷️ 다른 그림 5가지 찾기</div>
-          <div className="text-right">
-            <div className="text-xs text-cyan-200">남은 시간</div>
-            <div className="text-3xl font-bold text-emerald-300">{timeLeft}s</div>
-          </div>
-        </div>
-
-        {/* 패널 2개 */}
-        <div className="flex gap-6 justify-center">
-          {renderPanel('left')}
-          {renderPanel('right')}
-        </div>
-
-        {/* 발견 라벨 리스트 */}
-        <div className="mt-3 flex flex-wrap gap-2 justify-center">
-          {DIFFS.map(d => {
-            const f = found.has(d.id);
+        {/* 발견 라벨 리스트 (하단) */}
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-3 flex flex-wrap gap-2 justify-center max-w-[90%] pointer-events-none">
+          {targets.map(t => {
+            const f = found.has(t.id);
             return (
               <span
-                key={d.id}
+                key={t.id}
                 className="px-3 py-1 rounded-full text-sm font-bold border-2"
                 style={{
-                  background: f ? '#22c55e' : 'rgba(255,255,255,0.1)',
-                  color: f ? '#fff' : '#94a3b8',
-                  borderColor: f ? '#86efac' : '#334155',
+                  background: f ? '#22c55e' : 'rgba(0,0,0,0.55)',
+                  color: f ? '#fff' : '#cbd5e1',
+                  borderColor: f ? '#86efac' : '#475569',
                 }}
               >
-                {f ? `✓ ${d.label}` : '???'}
+                {f ? `✓ ${t.label}` : '???'}
               </span>
             );
           })}
         </div>
 
-        {wrongCount > 0 && (
-          <p className="text-center text-red-300 text-xs mt-2 font-mono">오답 클릭: {wrongCount}</p>
-        )}
-
-        {/* 시작/완료 오버레이 */}
+        {/* 시작 오버레이 */}
         {!started && (
-          <div className="absolute inset-0 bg-black/85 rounded-2xl flex flex-col items-center justify-center text-white">
-            <h2 className="text-3xl font-bold mb-2">⛷️ 다른 그림 찾기</h2>
-            <p className="text-sm text-cyan-200 mb-1 max-w-md text-center">
-              <strong>더운 환경(왼쪽)</strong>과 <strong>추운 실내 스키장(오른쪽)</strong>에서의
-              우리 몸 반응 차이 5가지를 찾아 클릭하세요.
+          <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center text-white px-8">
+            <h2 className="text-5xl font-bold mb-4">다른 그림 찾기</h2>
+            <p
+              className="text-2xl text-cyan-200 mb-8 text-center max-w-3xl"
+              style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+            >
+              두 그림에서 다른 {target}곳을 찾아 클릭하세요
             </p>
             <button
               onClick={() => setStarted(true)}
-              className="mt-4 bg-cyan-500 hover:bg-cyan-600 text-white font-bold px-8 py-3 rounded-full shadow-xl text-lg"
+              className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold px-10 py-4 rounded-full shadow-xl text-3xl"
             >
               시작
             </button>
           </div>
         )}
         {finished && (
-          <div className="absolute inset-0 bg-black/85 rounded-2xl flex flex-col items-center justify-center text-white">
-            <h2 className="text-3xl font-bold mb-2">
-              {found.size >= DIFF_TARGET ? '🎉 모두 찾았어요!' : '⏰ 시간 종료'}
+          <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center text-white">
+            <h2 className="text-4xl font-bold mb-3">
+              {found.size >= target ? '🎉 모두 찾았어요!' : '⏰ 시간 종료'}
             </h2>
-            <p className="text-lg mb-1">
-              찾은 차이 <span className="text-cyan-300 font-bold">{found.size}</span> / {DIFF_TARGET}
+            <p className="text-2xl mb-1">
+              찾은 차이 <span className="text-cyan-300 font-bold">{found.size}</span> / {target}
             </p>
-            <p className="text-sm text-slate-300">다음 단계로 진행…</p>
+            {wrongCount > 0 && (
+              <p className="text-base text-red-300 mt-1 font-mono">오답 클릭: {wrongCount}</p>
+            )}
+            <p className="text-sm text-slate-300 mt-2">다음 단계로 진행…</p>
           </div>
         )}
       </div>
 
       <style jsx>{`
-        @keyframes wrong-x {
-          0%   { opacity: 0; transform: scale(0.5); }
-          15%  { opacity: 1; transform: scale(1.2); }
-          100% { opacity: 0; transform: scale(1); }
+        @keyframes spot-wrong-x {
+          0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+          15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
         }
       `}</style>
     </div>
