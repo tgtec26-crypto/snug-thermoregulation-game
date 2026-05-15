@@ -120,3 +120,9 @@ export function playSfx(key: SfxKey) {
   el.volume = SFX_VOLUME;
   safePlay(el);
 }
+
+/** 첫 사용자 제스처 직후 호출 — autoplay 차단으로 paused 된 현재 BGM 재시도. */
+export function unlockAudio() {
+  if (typeof window === 'undefined') return;
+  if (currentBgm && currentBgm.el.paused) safePlay(currentBgm.el);
+}

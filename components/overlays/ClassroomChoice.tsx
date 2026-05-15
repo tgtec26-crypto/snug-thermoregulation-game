@@ -28,7 +28,7 @@ export function ClassroomChoice() {
     };
 
     return (
-      <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/50 backdrop-blur-[2px] px-6">
+      <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/50 backdrop-blur-[2px] px-6">
         <div
           className="bg-black/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl px-10 py-8 w-full max-w-[1100px] flex flex-col gap-6"
           style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
@@ -66,15 +66,6 @@ export function ClassroomChoice() {
             })}
           </div>
         </div>
-      </div>
-    );
-  }
-
-  if (phase === 'classroom_depart') {
-    // ClassroomScene이 즉시 출구로 이동시키므로 모달 불필요. 간소한 토스트성 안내.
-    return (
-      <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 bg-black/80 text-white px-3 py-1.5 rounded-full text-sm">
-        🎒 가방 챙기고 공항으로!
       </div>
     );
   }

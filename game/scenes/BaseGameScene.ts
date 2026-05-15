@@ -80,13 +80,15 @@ export abstract class BaseGameScene extends Phaser.Scene {
     useGameStore.getState().setActiveNodes(this.nodesData);
 
     // React 오버레이 클릭 → Phaser 이동 브릿지
-    this.storeUnsub = useGameStore.subscribe((state, prev) => {
+    const unsub = useGameStore.subscribe((state, prev) => {
+      if (!this.scene) { unsub(); return; }
       if (state.pendingNodeClick && state.pendingNodeClick !== prev.pendingNodeClick) {
         const node = this.findNode(state.pendingNodeClick);
         if (node) this.moveToNode(node);
         useGameStore.getState().clearNodeClick();
       }
     });
+    this.storeUnsub = unsub;
 
     // hook
     this.onSceneReady();

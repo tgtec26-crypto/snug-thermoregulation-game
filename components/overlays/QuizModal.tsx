@@ -86,7 +86,7 @@ export function QuizModal() {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/50 backdrop-blur-[2px] px-6">
+    <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/50 backdrop-blur-[2px] px-6">
       <div
         className="bg-black/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl px-8 py-6 w-full max-w-[720px] flex flex-col gap-5"
         style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}

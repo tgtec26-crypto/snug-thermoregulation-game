@@ -22,7 +22,7 @@ export function Toast() {
 
   if (!show) return null;
   return (
-    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white px-3 py-1.5 rounded-full text-sm shadow-md">
+    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white px-3 py-1.5 rounded-full text-sm shadow-md">
       {text}
     </div>
   );

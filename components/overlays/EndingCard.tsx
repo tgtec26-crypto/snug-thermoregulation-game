@@ -10,7 +10,7 @@ export function EndingCard() {
 
   return (
     <div
-      className="fixed inset-0 z-40"
+      className="absolute inset-0 z-40"
       style={{
         backgroundImage: `url('/assets/backgrounds/ending.png')`,
         backgroundSize: 'cover',

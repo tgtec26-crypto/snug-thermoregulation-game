@@ -402,7 +402,7 @@ export function CatchFallingItems({ onFinish }: Props) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-40 flex items-center justify-center overflow-hidden"
+      className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden"
       style={{
         wordBreak: 'keep-all',
         overflowWrap: 'break-word',
@@ -605,6 +605,79 @@ export function CatchFallingItems({ onFinish }: Props) {
           </div>
         )}
       </div>
+
+      {/* 터치 컨트롤 — 좌하단 이동, 우하단 이동 + 위에 발사 (스케일 컨테이너 밖) */}
+      {started && !finished && (
+        <>
+          {/* 왼쪽 이동 */}
+          <button
+            type="button"
+            aria-label="왼쪽 이동"
+            onPointerDown={(e) => { e.preventDefault(); (e.target as Element).setPointerCapture?.(e.pointerId); keysRef.current.left = true; }}
+            onPointerUp={() => { keysRef.current.left = false; }}
+            onPointerCancel={() => { keysRef.current.left = false; }}
+            onPointerLeave={() => { keysRef.current.left = false; }}
+            className="absolute z-50 select-none flex items-center justify-center text-white font-bold active:scale-95"
+            style={{
+              left: 24,
+              bottom: 24,
+              width: 77,
+              height: 77,
+              background: 'rgba(0,0,0,0.55)',
+              border: '3px solid rgba(255,255,255,0.7)',
+              borderRadius: '50%',
+              fontSize: 32,
+              touchAction: 'none',
+            }}
+          >
+            ◀
+          </button>
+          {/* 오른쪽 이동 */}
+          <button
+            type="button"
+            aria-label="오른쪽 이동"
+            onPointerDown={(e) => { e.preventDefault(); (e.target as Element).setPointerCapture?.(e.pointerId); keysRef.current.right = true; }}
+            onPointerUp={() => { keysRef.current.right = false; }}
+            onPointerCancel={() => { keysRef.current.right = false; }}
+            onPointerLeave={() => { keysRef.current.right = false; }}
+            className="absolute z-50 select-none flex items-center justify-center text-white font-bold active:scale-95"
+            style={{
+              right: 24,
+              bottom: 24,
+              width: 77,
+              height: 77,
+              background: 'rgba(0,0,0,0.55)',
+              border: '3px solid rgba(255,255,255,0.7)',
+              borderRadius: '50%',
+              fontSize: 32,
+              touchAction: 'none',
+            }}
+          >
+            ▶
+          </button>
+          {/* 발사 — 오른쪽 이동 버튼 위 */}
+          <button
+            type="button"
+            aria-label="발사"
+            onPointerDown={(e) => { e.preventDefault(); tryShoot(); }}
+            className="absolute z-50 select-none flex items-center justify-center text-white font-bold active:scale-95"
+            style={{
+              right: 24,
+              bottom: 24 + 77 + 13,
+              width: 77,
+              height: 77,
+              background: 'rgba(220,38,38,0.7)',
+              border: '3px solid rgba(255,255,255,0.8)',
+              borderRadius: '50%',
+              fontSize: 29,
+              touchAction: 'none',
+              boxShadow: '0 0 16px rgba(220,38,38,0.7)',
+            }}
+          >
+            ●
+          </button>
+        </>
+      )}
 
       {/* 시작 안내 — viewport 전체 (스케일 컨테이너 밖) */}
       {!started && (

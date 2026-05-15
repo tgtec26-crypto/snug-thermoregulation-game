@@ -36,6 +36,13 @@ function randomChoice(): RPSChoice {
   return CHOICES[Math.floor(Math.random() * 3)];
 }
 
+// 프레임별 손 그림이 프레임 중앙에서 살짝 어긋나 있어 시각적 정렬 보정 (px, +면 오른쪽 이동)
+const FRAME_NUDGE_PX: Record<RPSChoice, number> = {
+  scissors: 40,
+  rock: 10,
+  paper: -20,
+};
+
 function RPSSprite({ choice, size = 240 }: { choice: RPSChoice; size?: number }) {
   // 컨테이너 비율 = 프레임 비율 (366:455). size = 가로 px.
   const w = size;
@@ -48,7 +55,7 @@ function RPSSprite({ choice, size = 240 }: { choice: RPSChoice; size?: number })
         height: h,
         backgroundImage: 'url(/assets/sprites/rock_paper_scissors.png)',
         backgroundSize: '300% 100%',
-        backgroundPosition: `${SPRITE_INDEX[choice] * 50}% 0%`,
+        backgroundPosition: `calc(${SPRITE_INDEX[choice] * 50}% + ${FRAME_NUDGE_PX[choice]}px) 0%`,
         imageRendering: 'pixelated',
       }}
       aria-label={LABEL[choice]}
@@ -169,7 +176,7 @@ export function RPSModal() {
   const playerName = nickname || '플레이어';
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-40 bg-black/50 backdrop-blur-[2px] px-6">
+    <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/50 backdrop-blur-[2px] px-6">
       <div
         className="bg-black/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl px-10 py-8 w-full max-w-[1100px] flex flex-col gap-6"
         style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
@@ -185,7 +192,7 @@ export function RPSModal() {
           </p>
         </div>
 
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
+        <div className="grid grid-cols-[1fr_280px_1fr] items-center gap-6">
           {/* 왼쪽: 플레이어 — 이름 옆에 승점 원 인라인 */}
           <div className="flex flex-col items-center gap-3">
             <div className="flex flex-col items-center gap-1">

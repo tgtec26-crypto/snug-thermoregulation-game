@@ -30,13 +30,15 @@ export class AirportScene extends BaseGameScene {
   protected onSceneReady() {
     // QuizModal이 phase 보고 자동으로 띄움. 정답 시 phase가 worldmap_to_*로 바뀌면 여기서 씬 전환.
     const unsub = useGameStore.subscribe((s, prev) => {
+      if (!this.scene) { unsub(); return; }
       const justEnteredWorldmap =
         prev.phase !== s.phase &&
         (s.phase === 'worldmap_to_1' || s.phase === 'worldmap_to_2' || s.phase === 'worldmap_to_home');
       if (justEnteredWorldmap) {
-        this.time.delayedCall(200, () => this.scene.start('worldmap'));
+        this.time.delayedCall(200, () => { if (this.scene) this.scene.start('worldmap'); });
       }
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsub);
+    this.events.once(Phaser.Scenes.Events.DESTROY, unsub);
   }
 }

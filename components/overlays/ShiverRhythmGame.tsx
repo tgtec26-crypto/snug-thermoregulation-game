@@ -241,7 +241,7 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center"
+      className="absolute inset-0 z-40 flex items-center justify-center"
       style={{
         background: 'radial-gradient(ellipse at center, #0c2a4e 0%, #050a18 100%)',
         imageRendering: 'pixelated' as const,
@@ -514,23 +514,31 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
         </div>
         </div>
 
-        {/* 키 라벨 — 레인 영역에만 맞추기 (오른쪽 체온바 56px + gap 8px 제외) */}
-        <div className="flex mt-2" style={{ height: 48, paddingRight: 64 }}>
+        {/* 키 라벨 + 터치 입력 — 레인 영역에만 맞추기 (오른쪽 체온바 56px + gap 8px 제외) */}
+        <div className="flex mt-2" style={{ height: 64, paddingRight: 64 }}>
           {LANE_KEYS.map((k, i) => (
-            <div
+            <button
               key={k}
-              className="flex-1 flex items-center justify-center font-mono font-bold text-white"
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                if (started && !finished) tryHit(i);
+              }}
+              disabled={!started || finished}
+              className="flex-1 flex items-center justify-center font-mono font-bold text-white active:scale-95"
               style={{
                 margin: '0 2px',
                 background: '#1e293b',
                 border: `2px solid ${LANE_COLORS[i]}`,
-                borderRadius: 4,
+                borderRadius: 6,
                 boxShadow: `inset 0 -3px 0 rgba(0,0,0,0.4), 0 0 6px ${LANE_COLORS[i]}`,
-                fontSize: 20,
+                fontSize: 28,
+                touchAction: 'manipulation',
+                cursor: started && !finished ? 'pointer' : 'default',
               }}
             >
               {k}
-            </div>
+            </button>
           ))}
         </div>
 

@@ -203,13 +203,13 @@ export function WhackWordMole({ onFinish }: Props) {
   const cellHPct = (cellSize.h / imageSize.h) * 100;
 
   return (
-    <div className="fixed inset-0 z-40 bg-black flex items-center justify-center">
+    <div className="absolute inset-0 z-40 bg-black flex items-center justify-center" style={{ containerType: 'size' }}>
       {/* 게임 영역: 배경 이미지 비율 유지 (letterbox) */}
       <div
         className="relative shadow-2xl"
         style={{
-          width: `min(100vw, calc(100vh * ${imageSize.w} / ${imageSize.h}))`,
-          height: `min(100vh, calc(100vw * ${imageSize.h} / ${imageSize.w}))`,
+          width: `min(100cqw, calc(100cqh * ${imageSize.w} / ${imageSize.h}))`,
+          height: `min(100cqh, calc(100cqw * ${imageSize.h} / ${imageSize.w}))`,
           backgroundImage: `url(${BG_SRC})`,
           backgroundSize: '100% 100%',
           backgroundPosition: 'center',

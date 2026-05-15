@@ -93,6 +93,7 @@ export class CountryMapScene extends Phaser.Scene {
     // 방어적: 이전 인스턴스의 subscriber가 남아 있을 가능성 차단 (Phaser 씬 재진입 시 closure leak 방지)
     if (this.storeUnsub) { this.storeUnsub(); this.storeUnsub = null; }
     const unsub = useGameStore.subscribe((state, prev) => {
+      if (!this.scene) { unsub(); return; }
       if (state.pendingNodeClick && state.pendingNodeClick !== prev.pendingNodeClick) {
         const clicked = state.pendingNodeClick;
         useGameStore.getState().clearNodeClick();
@@ -102,11 +103,13 @@ export class CountryMapScene extends Phaser.Scene {
       }
     });
     this.storeUnsub = unsub;
-    // shutdown 이벤트로도 한 번 더 정리 (shutdown() 메서드 + 이중 안전망)
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    // shutdown/destroy 이벤트로도 한 번 더 정리 (shutdown() 메서드 + 이중 안전망)
+    const cleanup = () => {
       unsub();
       if (this.storeUnsub === unsub) this.storeUnsub = null;
-    });
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
   }
 
   shutdown() {

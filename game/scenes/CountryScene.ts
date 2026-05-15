@@ -50,6 +50,7 @@ export class CountryScene extends BaseGameScene {
     if (this.phaseUnsub) { this.phaseUnsub(); this.phaseUnsub = null; }
     // 미니게임 완료(MinigameModal이 country_<slot>_arrived 로 phase 설정) → country_map 복귀
     const unsub = useGameStore.subscribe((s, prev) => {
+      if (!this.scene) { unsub(); return; }
       if (prev.phase === s.phase) return;
       const arrivedPhase: Phase = this.slot === 1 ? 'country_1_arrived' : 'country_2_arrived';
       if (s.phase === arrivedPhase) {
@@ -57,10 +58,12 @@ export class CountryScene extends BaseGameScene {
       }
     });
     this.phaseUnsub = unsub;
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    const cleanup = () => {
       unsub();
       if (this.phaseUnsub === unsub) this.phaseUnsub = null;
-    });
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
   }
 
   private minigamePhase(): Phase {

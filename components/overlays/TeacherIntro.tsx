@@ -197,7 +197,7 @@ export function TeacherIntro() {
   return (
     <div
       onClick={advance}
-      className="fixed inset-0 z-40 cursor-pointer bg-black/50 backdrop-blur-[2px] flex items-end justify-center pb-6"
+      className="absolute inset-0 z-40 cursor-pointer bg-black/50 backdrop-blur-[2px] flex items-end justify-center pb-6"
     >
       <div className="relative mx-auto w-full max-w-[922px] px-6">
         {/* 선생님 초상화 */}

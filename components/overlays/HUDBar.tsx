@@ -24,7 +24,7 @@ export function HUDBar() {
   const markerTopPct = tempToPercent(temp);
 
   return (
-    <aside className="fixed right-0 top-0 h-screen w-[110px] bg-white/95 border-l border-black/10 p-2 flex flex-col gap-2 font-sans text-[12px]">
+    <aside className="absolute right-0 top-0 h-full w-[110px] bg-white/95 border-l border-black/10 p-2 flex flex-col gap-2 font-sans text-[12px]">
       <div className="text-center font-bold text-slate-800 pb-1 border-b border-black/5">내 몸 상태</div>
 
       {/* 체온 막대 */}

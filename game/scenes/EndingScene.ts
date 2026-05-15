@@ -21,10 +21,12 @@ export class EndingScene extends BaseGameScene {
 
     // EndingCard의 "다시 하기" → reset() → phase='title'. Phaser도 타이틀로 복귀.
     const unsub = useGameStore.subscribe((s, prev) => {
+      if (!this.scene) { unsub(); return; }
       if (prev.phase === 'ending' && s.phase === 'title') {
         this.scene.start('title');
       }
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsub);
+    this.events.once(Phaser.Scenes.Events.DESTROY, unsub);
   }
 }
