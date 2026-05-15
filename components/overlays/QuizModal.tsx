@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { startAirportQuiz, evaluateAnswer } from '@/game/systems/quizSystem';
 import { loadQuizPool } from '@/game/data/quizPool';
+import { playSfx } from '@/lib/audio';
 import type { QuizQuestion, Phase } from '@/game/types';
 
 const AIRPORT_QUIZ_PHASES = new Set<Phase>(['airport_start', 'airport_1', 'airport_2']);
@@ -58,6 +59,7 @@ export function QuizModal() {
     const result = evaluateAnswer(current, idx);
     recordQuizAttempt(current.id, result.correct && firstAttemptForThisAirport);
     setShowExplanation(result);
+    playSfx(result.correct ? 'correct' : 'error');
     if (result.correct) {
       // 1.8초 후 모달 닫고 phase 진행
       setTimeout(() => {

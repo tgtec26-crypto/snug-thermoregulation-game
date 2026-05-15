@@ -1,16 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import { SpotTheDifference } from '@/components/overlays/minigames/SpotTheDifference';
+import { SpotTheDifference, type SpotDiffVariant } from '@/components/overlays/minigames/SpotTheDifference';
 
 export default function SpotDifferenceTestPage() {
   const [runId, setRunId] = useState(0);
+  const [variant, setVariant] = useState<SpotDiffVariant>('ski');
   const [last, setLast] = useState<{ success: boolean; score: number } | null>(null);
 
   return (
     <div className="min-h-screen bg-black text-white">
+      <div className="fixed top-2 left-2 z-50 flex gap-1 bg-black/70 backdrop-blur rounded p-1">
+        {(['ski', 'catacomb'] as SpotDiffVariant[]).map(v => (
+          <button
+            key={v}
+            onClick={() => { setVariant(v); setLast(null); setRunId(n => n + 1); }}
+            className={`px-3 py-1 rounded text-sm font-bold ${
+              variant === v ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            {v === 'ski' ? '🇦🇪 두바이 스키장' : '🇪🇬 이집트 카타콤'}
+          </button>
+        ))}
+      </div>
+
       <SpotTheDifference
-        key={runId}
+        key={`${variant}-${runId}`}
+        variant={variant}
         onFinish={(r) => setLast(r)}
       />
 

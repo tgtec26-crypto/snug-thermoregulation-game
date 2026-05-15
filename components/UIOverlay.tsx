@@ -10,10 +10,12 @@ import { TempTickRunner } from '@/components/overlays/TempTickRunner';
 import { EndingCard } from '@/components/overlays/EndingCard';
 import { NodeLabelOverlay } from '@/components/overlays/NodeLabelOverlay';
 import { GuidanceBanner } from '@/components/overlays/GuidanceBanner';
+import { AudioRunner } from '@/components/overlays/AudioRunner';
 
 export function UIOverlay() {
   return (
     <>
+      <AudioRunner />
       <TitleNicknameModal />
       <TeacherIntro />
       <ClassroomChoice />

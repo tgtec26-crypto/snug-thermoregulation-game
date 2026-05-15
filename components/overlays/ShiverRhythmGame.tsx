@@ -33,7 +33,7 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
   const [combo, setCombo] = useState(0);
   const [shiverPops, setShiverPops] = useState(0);
   const [feedback, setFeedback] = useState<{ text: string; key: number; lane: number } | null>(null);
-  const [comboFeedback, setComboFeedback] = useState<{ text: string; key: number } | null>(null);
+  const [comboFeedback, setComboFeedback] = useState<{ text: string; key: number; lane: number } | null>(null);
   const [flash, setFlash] = useState<{ lane: number; perfect: boolean; key: number } | null>(null);
   const [temp, setTemp] = useState(36.5);
   const tempRef = useRef(36.5);
@@ -209,7 +209,7 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
       setShiverPops(shiverPopsRef.current);
       onShiverSuccess();
       // 콤보 이벤트는 별도 피드백으로 출력
-      setComboFeedback({ text: `🥶 떨림 콤보 +${shiverPopsRef.current}!`, key: Date.now() });
+      setComboFeedback({ text: `콤보 ${comboRef.current}`, key: Date.now(), lane });
     }
   };
 
@@ -227,10 +227,10 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
     return () => clearTimeout(id);
   }, [comboFeedback]);
 
-  // 언마운트 정리
+  // 언마운트 정리 — finishedRef는 게임 로직이 관리. cleanup은 신스만 해제.
+  // (React 18 StrictMode 가 dev 마운트 시 setup→cleanup→setup 을 시뮬레이트해 ref가 영구 오염되는 것 방지)
   useEffect(() => {
     return () => {
-      finishedRef.current = true;
       if (synthRef.current) {
         synthRef.current.releaseAll();
         synthRef.current.dispose();
@@ -395,20 +395,20 @@ export function ShiverRhythmGame({ onFinish, onShiverSuccess, onMiss }: Props) {
             </div>
           )}
 
-          {/* 콤보 이벤트 — 레인 영역 상단 중앙, 별도 색상 */}
+          {/* 콤보 이벤트 — 콤보를 일으킨 노트의 레인 부근(피드백 위쪽) */}
           {comboFeedback && (
             <div
               key={`combo-${comboFeedback.key}`}
               style={{
                 position: 'absolute',
-                left: '50%',
-                top: 16,
+                left: `${(comboFeedback.lane + 0.5) * (100 / LANE_COUNT)}%`,
+                bottom: 130,
                 transform: 'translateX(-50%)',
-                color: '#22d3ee',
+                color: '#fde047',
                 fontFamily: 'monospace',
                 fontWeight: 900,
                 fontSize: 32,
-                textShadow: '2px 2px 0 #000, 0 0 16px currentColor',
+                textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 0 12px #f97316',
                 animation: 'rhythm-combo-pop 1.3s ease-out forwards',
                 pointerEvents: 'none',
                 whiteSpace: 'nowrap',

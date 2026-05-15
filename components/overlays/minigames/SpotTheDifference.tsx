@@ -2,15 +2,23 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '@/store/gameStore';
+import { playSfx } from '@/lib/audio';
 import type { MinigameResult } from '../MinigameModal';
 
 /**
- * 스키장(더2 실내) — 다른 그림 찾기 (풀스크린).
- * 배경 이미지: /assets/backgrounds/diff_img_game.png — 좌/우 두 그림이 한 장에 합쳐진 형태.
- * 정답 클릭 영역은 /data/spot-difference-targets.json 에서 동적으로 로드 (어드민 편집).
+ * 더운 나라 실내 — 다른 그림 찾기 (풀스크린).
+ * variant 별로 배경/정답 데이터 분리:
+ *  - ski:      두바이 실내 스키장 (diff_img_ski.png)
+ *  - catacomb: 이집트 알렉산드리아 카타콤 (diff_img_catacomb.png, 4곳)
+ * 정답 클릭 영역은 /data/spot-difference-targets-{variant}.json 에서 로드 (어드민 편집).
  */
 
-const BG_SRC = '/assets/backgrounds/diff_img_game.png';
+export type SpotDiffVariant = 'ski' | 'catacomb';
+
+const VARIANT_BG: Record<SpotDiffVariant, string> = {
+  ski:      '/assets/backgrounds/diff_img_ski.png',
+  catacomb: '/assets/backgrounds/diff_img_catacomb.png',
+};
 const TIME_LIMIT_SEC = 90;
 
 interface Point { x: number; y: number; }
@@ -27,24 +35,37 @@ interface TargetsData {
   targets: Target[];
 }
 
-const DEFAULT_TARGETS: TargetsData = {
-  imageSize: { w: 1376, h: 768 },
-  targets: [
-    { id: 't1', label: '차이 1', r: 40, left: { x: 200, y: 200 }, right: { x: 888, y: 200 } },
-    { id: 't2', label: '차이 2', r: 40, left: { x: 400, y: 350 }, right: { x: 1088, y: 350 } },
-    { id: 't3', label: '차이 3', r: 40, left: { x: 300, y: 500 }, right: { x: 988, y: 500 } },
-    { id: 't4', label: '차이 4', r: 40, left: { x: 500, y: 250 }, right: { x: 1188, y: 250 } },
-    { id: 't5', label: '차이 5', r: 40, left: { x: 250, y: 450 }, right: { x: 938, y: 450 } },
-  ],
+const DEFAULT_TARGETS: Record<SpotDiffVariant, TargetsData> = {
+  ski: {
+    imageSize: { w: 1376, h: 768 },
+    targets: [
+      { id: 't1', label: '차이 1', r: 40, left: { x: 200, y: 200 }, right: { x: 888, y: 200 } },
+      { id: 't2', label: '차이 2', r: 40, left: { x: 400, y: 350 }, right: { x: 1088, y: 350 } },
+      { id: 't3', label: '차이 3', r: 40, left: { x: 300, y: 500 }, right: { x: 988, y: 500 } },
+      { id: 't4', label: '차이 4', r: 40, left: { x: 500, y: 250 }, right: { x: 1188, y: 250 } },
+      { id: 't5', label: '차이 5', r: 40, left: { x: 250, y: 450 }, right: { x: 938, y: 450 } },
+    ],
+  },
+  catacomb: {
+    imageSize: { w: 1344, h: 752 },
+    targets: [
+      { id: 't1', label: '차이 1', r: 40, left: { x: 200, y: 200 }, right: { x: 872, y: 200 } },
+      { id: 't2', label: '차이 2', r: 40, left: { x: 400, y: 350 }, right: { x: 1072, y: 350 } },
+      { id: 't3', label: '차이 3', r: 40, left: { x: 300, y: 500 }, right: { x: 972, y: 500 } },
+      { id: 't4', label: '차이 4', r: 40, left: { x: 500, y: 250 }, right: { x: 1172, y: 250 } },
+    ],
+  },
 };
 
 interface Props {
   onFinish: (result: MinigameResult) => void;
+  variant?: SpotDiffVariant;
 }
 
-export function SpotTheDifference({ onFinish }: Props) {
+export function SpotTheDifference({ onFinish, variant = 'ski' }: Props) {
   const adjustTemp = useGameStore(s => s.adjustTemp);
-  const [data, setData] = useState<TargetsData>(DEFAULT_TARGETS);
+  const [data, setData] = useState<TargetsData>(DEFAULT_TARGETS[variant]);
+  const bgSrc = VARIANT_BG[variant];
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [found, setFound] = useState<Set<string>>(new Set());
@@ -54,11 +75,12 @@ export function SpotTheDifference({ onFinish }: Props) {
   const finishedRef = useRef(false);
 
   useEffect(() => {
-    fetch(`/data/spot-difference-targets.json?t=${Date.now()}`)
+    setData(DEFAULT_TARGETS[variant]);
+    fetch(`/data/spot-difference-targets-${variant}.json?t=${Date.now()}`)
       .then(r => r.ok ? r.json() : null)
       .then((d: TargetsData | null) => { if (d) setData(d); })
       .catch(() => { /* default 사용 */ });
-  }, []);
+  }, [variant]);
 
   const target = data.targets.length;
 
@@ -122,6 +144,7 @@ export function SpotTheDifference({ onFinish }: Props) {
     if (hit) {
       setFound(prev => new Set(prev).add(hit!.id));
       adjustTemp(-0.1);
+      playSfx('correct');
     } else {
       setWrongCount(c => c + 1);
       setWrongFlash({ x: clickX, y: clickY, key: Date.now() });
@@ -138,7 +161,7 @@ export function SpotTheDifference({ onFinish }: Props) {
         style={{
           width: `min(100vw, calc(100vh * ${imageSize.w} / ${imageSize.h}))`,
           height: `min(100vh, calc(100vw * ${imageSize.h} / ${imageSize.w}))`,
-          backgroundImage: `url(${BG_SRC})`,
+          backgroundImage: `url(${bgSrc})`,
           backgroundSize: '100% 100%',
           backgroundPosition: 'center',
           cursor: started && !finished ? 'crosshair' : 'default',

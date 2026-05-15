@@ -1,3 +1,4 @@
+import * as Phaser from 'phaser';
 import { BaseGameScene } from './BaseGameScene';
 import { useGameStore } from '@/store/gameStore';
 
@@ -17,5 +18,13 @@ export class EndingScene extends BaseGameScene {
     if (useGameStore.getState().phase !== 'ending') {
       useGameStore.getState().setPhase('ending');
     }
+
+    // EndingCard의 "다시 하기" → reset() → phase='title'. Phaser도 타이틀로 복귀.
+    const unsub = useGameStore.subscribe((s, prev) => {
+      if (prev.phase === 'ending' && s.phase === 'title') {
+        this.scene.start('title');
+      }
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsub);
   }
 }

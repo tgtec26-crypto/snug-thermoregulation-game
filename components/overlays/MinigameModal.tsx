@@ -8,6 +8,7 @@ import { ShiverRhythmGame } from './ShiverRhythmGame';
 import { WhackWordMole } from './minigames/WhackWordMole';
 import { CatchFallingItems } from './minigames/CatchFallingItems';
 import { SpotTheDifference } from './minigames/SpotTheDifference';
+import { playSfx } from '@/lib/audio';
 
 const COUNTRY_PHASES = new Set<Phase>([
   'country_1_outdoor', 'country_1_indoor',
@@ -25,6 +26,7 @@ export function MinigameModal() {
   const adjustTemp = useGameStore(s => s.adjustTemp);
   const showToast = useGameStore(s => s.showToast);
   const setPhase = useGameStore(s => s.setPhase);
+  const actualHot = useGameStore(s => s.actualHot);
 
   const phaseRef = useRef<Phase>(phase);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
@@ -54,6 +56,7 @@ export function MinigameModal() {
   // 공통 종료 핸들러
   const handleFinish = useCallback((label: string) => (result: MinigameResult) => {
     if (result.success) {
+      playSfx('success');
       showToast(`✅ ${label} 성공!`);
     } else {
       showToast(`아쉽... ${label} — 다음 단계로 갑니다`);
@@ -63,6 +66,7 @@ export function MinigameModal() {
 
   const handleRhythmFinish = useCallback((result: { hits: number; misses: number; shiverPops: number }) => {
     if (result.shiverPops > 0) {
+      playSfx('success');
       showToast(`💪 떨림 ${result.shiverPops}회 성공! 체온 회복`);
     } else {
       showToast('아쉽... 다음 단계로 갑니다');
@@ -91,9 +95,11 @@ export function MinigameModal() {
       // 사막 — 떨어지는 아이템 받기
       return <CatchFallingItems onFinish={handleFinish('아이템 받기')} />;
 
-    case 'country_2_indoor':
-      // 스키장 — 다른 그림 찾기
-      return <SpotTheDifference onFinish={handleFinish('다른 그림 찾기')} />;
+    case 'country_2_indoor': {
+      // 더운 나라 실내 — 다른 그림 찾기 (Dubai → 스키장 / Egypt → 카타콤)
+      const variant = actualHot === 'egypt' ? 'catacomb' : 'ski';
+      return <SpotTheDifference variant={variant} onFinish={handleFinish('다른 그림 찾기')} />;
+    }
 
     default:
       return null;

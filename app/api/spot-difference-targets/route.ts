@@ -8,7 +8,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { data } = body;
+  const { data, variant } = body;
+
+  if (variant !== 'ski' && variant !== 'catacomb') {
+    return NextResponse.json({ error: 'variant must be "ski" or "catacomb"' }, { status: 400 });
+  }
 
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return NextResponse.json({ error: 'invalid payload: data must be object' }, { status: 400 });
@@ -36,8 +40,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const filepath = path.resolve(process.cwd(), 'public', 'data', 'spot-difference-targets.json');
+  const filename = `spot-difference-targets-${variant}.json`;
+  const filepath = path.resolve(process.cwd(), 'public', 'data', filename);
   await fs.writeFile(filepath, JSON.stringify(data, null, 2), 'utf-8');
 
-  return NextResponse.json({ ok: true, file: 'spot-difference-targets.json' });
+  return NextResponse.json({ ok: true, file: filename });
 }

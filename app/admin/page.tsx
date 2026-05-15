@@ -119,10 +119,23 @@ export default function AdminPage() {
     imageSize: { w: number; h: number };
     targets: DiffTarget[];
   };
-  const [diffData, setDiffData]   = useState<DiffTargets | null>(null);
-  const [diffDrag, setDiffDrag]   = useState<{ i: number; side: 'left' | 'right' } | null>(null);
-  const [diffSaved, setDiffSaved] = useState(false);
-  const diffWrapRef               = useRef<HTMLDivElement>(null);
+  type DiffVariant = 'ski' | 'catacomb';
+  const [diffVariant, setDiffVariant]   = useState<DiffVariant>('ski');
+  const [diffDataMap, setDiffDataMap]   = useState<Record<DiffVariant, DiffTargets | null>>({ ski: null, catacomb: null });
+  const [diffDrag, setDiffDrag]         = useState<{ i: number; side: 'left' | 'right' } | null>(null);
+  const [diffSaved, setDiffSaved]       = useState(false);
+  const diffWrapRef                     = useRef<HTMLDivElement>(null);
+  const diffData = diffDataMap[diffVariant];
+  const setDiffData = (next: DiffTargets) =>
+    setDiffDataMap(prev => ({ ...prev, [diffVariant]: next }));
+  const DIFF_VARIANT_BG: Record<DiffVariant, string> = {
+    ski:      '/assets/backgrounds/diff_img_ski.png',
+    catacomb: '/assets/backgrounds/diff_img_catacomb.png',
+  };
+  const DIFF_VARIANT_LABEL: Record<DiffVariant, string> = {
+    ski:      '🇦🇪 두바이 실내 스키장',
+    catacomb: '🇪🇬 이집트 카타콤',
+  };
 
   // 경로 데이터 로드
   useEffect(() => {
@@ -142,10 +155,14 @@ export default function AdminPage() {
       .then(r => r.ok ? r.json() : null)
       .then((d: SaunaHoles | null) => { if (d) setMoleHoles(d); })
       .catch(() => { /* ignore */ });
-    fetch(`/data/spot-difference-targets.json?t=${Date.now()}`)
-      .then(r => r.ok ? r.json() : null)
-      .then((d: DiffTargets | null) => { if (d) setDiffData(d); })
-      .catch(() => { /* ignore */ });
+    (['ski', 'catacomb'] as DiffVariant[]).forEach(v => {
+      fetch(`/data/spot-difference-targets-${v}.json?t=${Date.now()}`)
+        .then(r => r.ok ? r.json() : null)
+        .then((d: DiffTargets | null) => {
+          if (d) setDiffDataMap(prev => ({ ...prev, [v]: d }));
+        })
+        .catch(() => { /* ignore */ });
+    });
   }, []);
 
   // 국가 맵 데이터 로드 (국가 변경 시마다)
@@ -332,7 +349,7 @@ export default function AdminPage() {
     const r = await fetch('/api/spot-difference-targets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: diffData }),
+      body: JSON.stringify({ data: diffData, variant: diffVariant }),
     });
     if (r.ok) { setDiffSaved(true); setTimeout(() => setDiffSaved(false), 1500); }
     else alert('저장 실패 (다른 그림 찾기): ' + await r.text());
@@ -1072,7 +1089,22 @@ export default function AdminPage() {
       {/* ── 다른 그림 찾기 정답 영역 편집 ────────────────────────────────── */}
       <section className="border-t border-slate-700 pt-4 mt-4 flex flex-col gap-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <h2 className="text-lg font-bold">🔍 다른 그림 찾기 — 정답 영역 5곳</h2>
+          <h2 className="text-lg font-bold">🔍 다른 그림 찾기 — 정답 영역 ({diffData?.targets.length ?? 0}곳)</h2>
+          <div className="flex items-center gap-1 bg-slate-800 rounded p-1">
+            {(['ski', 'catacomb'] as DiffVariant[]).map(v => (
+              <button
+                key={v}
+                onClick={() => setDiffVariant(v)}
+                className={`px-3 py-1 rounded text-sm font-bold ${
+                  diffVariant === v
+                    ? 'bg-sky-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                {DIFF_VARIANT_LABEL[v]}
+              </button>
+            ))}
+          </div>
           <span className="text-xs text-slate-400">초록 원 핸들을 드래그해 정답 위치를 맞추세요. 반경(r)과 라벨은 옆 패널에서 편집.</span>
           <button
             onClick={saveDiffTargets}
@@ -1100,7 +1132,7 @@ export default function AdminPage() {
               onMouseLeave={() => setDiffDrag(null)}
             >
               <img
-                src="/assets/backgrounds/diff_img_game.png"
+                src={DIFF_VARIANT_BG[diffVariant]}
                 alt=""
                 className="absolute inset-0 w-full h-full object-fill pointer-events-none"
                 draggable={false}
@@ -1180,7 +1212,7 @@ export default function AdminPage() {
           </div>
         )}
         <p className="text-sm text-slate-400 mx-auto">
-          🟢 초록 원 = 정답 클릭 영역 / 1L~5L = 왼쪽 그림, 1R~5R = 오른쪽 그림 (드래그) / 우측 패널에서 라벨·반경 편집
+          🟢 초록 원 = 정답 클릭 영역 / nL = 왼쪽 그림, nR = 오른쪽 그림 (드래그) / 우측 패널에서 라벨·반경 편집
         </p>
       </section>
     </main>
